@@ -1,0 +1,15 @@
+/* 
+  Localizable.strings
+  LettersGame_iOS
+
+  Created by Volodymyr Yehorov on 17.04.2024.
+
+*/
+
+"New Game" = "New Game";
+
+"Letters:" = "Letters:";
+"Letters in Game:" = "Letters in Game:";
+
+"Words:" = "Words:";
+"Words in Game:" = "Words in Game:";
