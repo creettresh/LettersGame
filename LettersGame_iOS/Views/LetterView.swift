@@ -6,60 +6,47 @@
 //
 
 import SwiftUI
-import Combine
 
+/// One card on the table. Taps are handled by the parent.
 struct LetterView: View {
-    var isSelected: Bool
-    var letter: String
-    var index: Int
-
-    let scaleForTap = 1.1
-
-    let indexPublisher = PassthroughSubject<Int, Never>()
+    let isOpen: Bool
+    let letter: String
 
     var body: some View {
         GeometryReader { geometry in
-
-            let width: CGFloat = min(geometry.size.width, geometry.size.height)
-            let height = width
-            let xScale: CGFloat = 3 / 4
-            let tapScale = isSelected ? scaleForTap : 1
-            let xOffset = (width * (1.0 - xScale * tapScale)) / 2.0
-            let yOffset = (height * (isSelected ? 1 / tapScale : 1) / 2.0)
-
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .frame(width: width * xScale * tapScale, height: height * tapScale)
+                    .fill(.linearGradient(Self.gradient,
+                                          startPoint: isOpen ? Self.startPointUp : Self.startPointDown,
+                                          endPoint: isOpen ? Self.endPointUp : Self.endPointDown))
                     .shadow(radius: 8)
-                    .foregroundStyle(.linearGradient(Self.gradient,
-                        startPoint: isSelected ? Self.startPointUp : Self.startPointDown,
-                        endPoint: isSelected ? Self.endPointUp : Self.endPointDown))
-                    .animation(.easeInOut, value: isSelected)
-                    .contentShape(Rectangle())
 
-                Text(letter)
-                    .frame(width: width * xScale, height: height)
-                    .foregroundStyle(isSelected ? .blue : .clear)
-                    .font(.system(size: 220))
+                Text(verbatim: letter)
+                    .font(.system(size: geometry.size.height * 0.6, weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.2)
-                    .animation(.easeOut, value: isSelected)
+                    .foregroundStyle(isOpen ? .blue : .clear)
             }
-            .padding(.horizontal, xOffset)
-            .padding(.vertical, yOffset)
-            .onTapGesture {
-                indexPublisher.send(index)
-            }
+            .scaleEffect(isOpen ? 1.08 : 1)
+            .animation(.easeInOut, value: isOpen)
+            .contentShape(Rectangle())
         }
+        .accessibilityElement()
+        .accessibilityLabel(isOpen ? Text(verbatim: letter) : Text("Closed card"))
+        .accessibilityAddTraits(.isButton)
     }
 
-    static let gradient: Gradient = Gradient(colors:  [.yellow, .blue])
+    static let gradient = Gradient(colors: [.yellow, .blue])
     static let startPointDown = UnitPoint(x: 0, y: 1)
     static let endPointDown = UnitPoint(x: 1, y: 0)
-
     static let startPointUp = UnitPoint(x: 0.3, y: 0.7)
     static let endPointUp = UnitPoint(x: 1, y: 0)
 }
 
 #Preview {
-    LetterView(isSelected: false, letter: "A", index: 0)
+    HStack {
+        LetterView(isOpen: false, letter: "А")
+        LetterView(isOpen: true, letter: "Ї")
+    }
+    .frame(height: 120)
+    .padding()
 }

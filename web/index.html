@@ -166,22 +166,27 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .locked .card { cursor: default; }
 
 /* ---------- Results ---------- */
-#results { justify-content: center; gap: 18px; max-width: 520px; text-align: center; }
-#results h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 7vw, 38px); margin: 0; text-wrap: balance; }
+#results { justify-content: center; gap: 16px; max-width: 520px; text-align: center; overflow-y: auto; }
+.trophy { width: 84px; height: 84px; align-self: center; animation: rise .6s cubic-bezier(.3,.7,.3,1.4) both; }
+.trophy svg { width: 100%; height: 100%; }
+@keyframes rise { from { transform: scale(.3) translateY(20px); opacity: 0; } }
+#results h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(24px, 7vw, 34px); margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+.final-score { font-family: var(--font-display); font-weight: 800; font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
 .final { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.final .panel { align-items: center; text-align: center; gap: 6px; }
-.final .big { font-family: var(--font-display); font-weight: 800; font-size: 44px; font-variant-numeric: tabular-nums; line-height: 1; }
-.final .who { font-weight: 800; font-size: 17px; overflow-wrap: anywhere; }
+.final .panel { align-items: center; text-align: center; gap: 6px; padding: 14px 10px; }
+.final .who { font-family: var(--font-display); font-weight: 700; font-size: 16px; overflow-wrap: anywhere; }
+.final .sc { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
 .final ul { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.final li { font-size: 13px; font-weight: 700; background: var(--bg); border-radius: 8px; padding: 2px 8px; }
-.final .winner { outline: 3px solid currentColor; }
+.final li { font-size: 13px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 3px 10px; }
+.final li.none { background: none; color: var(--muted); font-weight: 700; }
+.final .winner { box-shadow: 0 0 0 3px currentColor, var(--shadow); }
 .row-btns { display: flex; gap: 10px; }
 .row-btns button { flex: 1; }
 .secondary { border: 2px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px; font-weight: 800; font-size: 17px; }
 
 canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 @media (prefers-reduced-motion: reduce) {
-  .card .inner, .word span, .pop { transition: none !important; animation: none !important; }
+  .card .inner, .word span, .pop, .trophy { transition: none !important; animation: none !important; }
 }
 @media (max-width: 380px) { .deck small { display: none; } }
 </style>
@@ -242,14 +247,16 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
 
 <!-- RESULTS -->
 <section class="screen" id="results" hidden>
+  <div class="trophy" id="trophy"></div>
   <h2 id="resTitle"></h2>
+  <div class="final-score" id="finalScore"></div>
   <div class="final">
-    <div class="panel" id="res1" style="color: var(--p1)"><span class="big" id="r-score1"></span><span class="who" id="r-name1"></span><ul id="r-words1"></ul></div>
-    <div class="panel" id="res2" style="color: var(--p2)"><span class="big" id="r-score2"></span><span class="who" id="r-name2"></span><ul id="r-words2"></ul></div>
+    <div class="panel" id="res1" style="color: var(--p1)"><span class="who" id="r-name1"></span><span class="sc" id="r-score1"></span><ul id="r-words1"></ul></div>
+    <div class="panel" id="res2" style="color: var(--p2)"><span class="who" id="r-name2"></span><span class="sc" id="r-score2"></span><ul id="r-words2"></ul></div>
   </div>
   <div class="row-btns">
-    <button class="secondary" id="toStart" type="button">До меню</button>
-    <button class="primary" id="again" type="button">Ще раз</button>
+    <button class="secondary" id="toStart" type="button">Меню</button>
+    <button class="primary" id="again" type="button">Грати ще</button>
   </div>
 </section>
 
@@ -272,7 +279,6 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   ];
   const APOS = /[ʼ'’]/;
   const TIME_PLAYER = 900, TIME_CPU_OPEN = 1500, TIME_CPU_THINK = 1000, TIME_NEXT_WORD = 1400;
-  const FORGET = { easy: 5, normal: 3, hard: 1 };
 
   const $ = (id) => document.getElementById(id);
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -346,30 +352,73 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   }
   renderCpu(); renderDecks();
 
-  // ---------- CPU (from AutoMovesAI.swift) ----------
-  class CPU {
-    constructor(level) { this.level = level; this.memory = new Map(); }  // letter -> card index
-    seen(letter, index) { this.memory.set(lower(letter), index); }
-    forgetSome() {
-      let n = FORGET[this.level];
-      while (n > 0 && this.memory.size > n) { this.memory.delete(this.memory.keys().next().value); n--; }
+  // ENGINE-START
+  // ---------- Rules (same as GameData.swift) ----------
+  class Engine {
+    start(letters, words, names) {
+      this.letters = letters; this.remaining = words.slice();
+      this.players = names.map(name => ({ name, words: [] }));
+      this.turn = 0; this.open = new Set(); this.found = new Set();
+      this.secret = words[0] || ""; this.over = words.length === 0;
     }
-    move(g) {
-      for (const ch of needed(g.secret)) {
-        if (g.found.has(ch)) continue;
-        const idx = this.memory.get(ch);
-        if (idx !== undefined && !g.open.has(idx)) return idx;
-      }
-      const known = new Set(this.memory.values());
-      const closed = g.letters.map((_, i) => i).filter(i => !g.open.has(i));
-      const fresh = closed.filter(i => !known.has(i));
-      const from = fresh.length ? fresh : closed;
-      return from[Math.floor(Math.random() * from.length)];
+    get needed() { return needed(this.secret); }
+    get wordDone() { return this.secret !== "" && [...this.needed].every(ch => this.found.has(ch)); }
+    get winner() {
+      const [a, b] = this.players.map(p => p.words.length);
+      return a === b ? null : (a > b ? 0 : 1);
+    }
+    canOpen(i) { return !this.over && !this.wordDone && i >= 0 && i < this.letters.length && !this.open.has(i); }
+    openCard(i) { if (!this.canOpen(i)) return false; this.open.add(i); return true; }
+    resolve(i) {
+      if (!this.open.has(i) || this.wordDone || this.over) return "notAllowed";
+      const ch = lower(this.letters[i]);
+      if (!this.needed.has(ch)) { this.open.delete(i); this.turn = 1 - this.turn; return "miss"; }
+      this.found.add(ch);
+      if (!this.wordDone) return "hit";
+      this.players[this.turn].words.push(this.secret);
+      return "wordCompleted";
+    }
+    nextWord() {
+      if (!this.wordDone) return;
+      this.remaining.shift(); this.open = new Set(); this.found = new Set();
+      if (!this.remaining.length) { this.secret = ""; this.over = true; return; }
+      this.secret = this.remaining[0]; this.turn = 1 - this.turn;
     }
   }
 
-  // ---------- Game ----------
-  let g = null;
+  // ---------- Computer player (same as AutoMovesAI.swift) ----------
+  const LEVELS = {
+    easy:   { recall: 0.72, keep: 0.65 },
+    normal: { recall: 0.78, keep: 0.72 },
+    hard:   { recall: 0.86, keep: 0.8 },
+  };
+  class CPU {
+    constructor(level, chance = Math.random, pick = (n) => Math.floor(Math.random() * n)) {
+      this.level = level; this.chance = chance; this.pick = pick;
+      this.memory = new Map();  // card index -> lowercased letter
+    }
+    remember(letter, index) { this.memory.set(index, lower(letter)); }
+    newWordStarted() {
+      for (const k of [...this.memory.keys()]) if (!(this.chance() < LEVELS[this.level].keep)) this.memory.delete(k);
+    }
+    choose(game) {
+      const closed = game.letters.map((_, i) => i).filter(i => !game.open.has(i));
+      if (!closed.length) return null;
+      const missing = [...game.needed].filter(ch => !game.found.has(ch));
+      for (const i of closed) {
+        const l = this.memory.get(i);
+        if (l !== undefined && missing.includes(l) && this.chance() < LEVELS[this.level].recall) return i;
+      }
+      const unseen = closed.filter(i => !this.memory.has(i));
+      const from = unseen.length ? unseen : closed;
+      return from[this.pick(from.length)];
+    }
+  }
+  // ENGINE-END
+
+  // ---------- Game screen: timing and drawing; rules live in Engine ----------
+  const game = new Engine();
+  let cpu = null, vsCPU = false, busy = false, playing = false;
   const timers = new Set();
   const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
   const clearTimers = () => { timers.forEach(clearTimeout); timers.clear(); };
@@ -379,26 +428,23 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   function startGame() {
     clearTimers();
     const p = pool();
-    g = {
-      names: [settings.name1 || "Гравець 1", settings.cpu ? "Комп'ютер" : (settings.name2 || "Гравець 2")],
-      vsCPU: settings.cpu,
-      cpu: settings.cpu ? new CPU(settings.level) : null,
-      letters: shuffle([...p.letters]),
-      words: shuffle([...p.words]),
-      secret: "", found: new Set(), open: new Set(),
-      turn: 0, scores: [0, 0], won: [[], []], busy: false,
-    };
-    g.secret = g.words[0];
-    $("g-name1").textContent = g.names[0];
-    $("g-name2").textContent = g.names[1];
+    vsCPU = settings.cpu;
+    cpu = vsCPU ? new CPU(settings.level) : null;
+    game.start(shuffle([...p.letters]), shuffle([...p.words]),
+      [settings.name1 || "Гравець 1", vsCPU ? "Комп'ютер" : (settings.name2 || "Гравець 2")]);
+    busy = false; playing = true;
+    $("g-name1").textContent = game.players[0].name;
+    $("g-name2").textContent = game.players[1].name;
     buildGrid(); renderBar(); renderWord();
     show("game"); layout();
   }
 
+  function stopGame() { clearTimers(); playing = false; busy = false; show("start"); }
+
   function buildGrid() {
     const grid = $("grid");
     grid.innerHTML = "";
-    g.letters.forEach((l, i) => {
+    game.letters.forEach((l, i) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "card"; b.dataset.i = i;
       b.setAttribute("aria-label", "Закрита картка");
@@ -408,138 +454,142 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   }
 
   function layout() {
-    if (!g || $("game").hidden) return;
+    if (!playing || $("game").hidden) return;
     const table = $("table"), grid = $("grid");
-    const W = table.clientWidth, H = table.clientHeight, n = g.letters.length, gap = W < 500 ? 6 : 10;
+    const W = table.clientWidth, H = table.clientHeight, n = game.letters.length, gap = W < 500 ? 6 : 10;
     let best = { cols: 1, w: 0 };
     for (let cols = 1; cols <= n; cols++) {
       const rows = Math.ceil(n / cols);
       const w = Math.min((W - gap * (cols - 1)) / cols, ((H - gap * (rows - 1)) / rows) * 0.75, 150);
       if (w > best.w) best = { cols, w };
     }
-    const w = Math.floor(best.w);
+    const w = Math.max(20, Math.floor(best.w));
     grid.style.gap = gap + "px";
     grid.style.gridTemplateColumns = `repeat(${best.cols}, ${w}px)`;
-    grid.querySelectorAll(".card").forEach(c => { c.style.width = w + "px"; c.style.height = Math.floor(w * 4 / 3) + "px"; c.querySelector(".face").style.fontSize = Math.floor(w * .56) + "px"; });
+    grid.querySelectorAll(".card").forEach(c => {
+      c.style.width = w + "px"; c.style.height = Math.floor(w * 4 / 3) + "px";
+      c.querySelector(".face").style.fontSize = Math.floor(w * .56) + "px";
+    });
   }
   addEventListener("resize", layout);
 
+  const isCPUTurn = () => vsCPU && game.turn === 1;
+  const isLocked = () => busy || isCPUTurn();
+
   function renderBar() {
     [0, 1].forEach(p => {
-      $("side" + (p + 1)).classList.toggle("active", g.turn === p);
-      $("turn" + (p + 1)).textContent = g.turn === p ? (g.vsCPU && p === 1 ? "думає…" : "хід") : "";
-      $("g-score" + (p + 1)).textContent = `Карток: ${g.scores[p]}`;
+      const active = game.turn === p && !game.over;
+      $("side" + (p + 1)).classList.toggle("active", active);
+      $("turn" + (p + 1)).textContent = active ? (vsCPU && p === 1 ? "думає…" : "твій хід") : "";
+      $("g-score" + (p + 1)).textContent = `Карток: ${game.players[p].words.length}`;
     });
-    $("wordsLeft").textContent = g.words.length;
+    $("wordsLeft").textContent = game.remaining.length;
     $("grid").classList.toggle("locked", isLocked());
   }
 
   function renderWord() {
     const el = $("word");
     el.innerHTML = "";
-    [...g.secret].forEach(ch => {
+    [...game.secret].forEach(ch => {
       const s = document.createElement("span");
       s.textContent = ch;
       if (APOS.test(ch)) s.className = "apos";
-      else if (g.found.has(lower(ch))) s.className = "found";
+      else if (game.found.has(lower(ch))) s.className = "found";
       el.appendChild(s);
     });
   }
 
-  const isLocked = () => g.busy || (g.vsCPU && g.turn === 1);
+  // Cards on screen follow game.open; hit/miss colors are only a short flash.
+  function syncCards() {
+    [...$("grid").children].forEach((c, i) => {
+      const open = game.open.has(i);
+      c.classList.toggle("open", open);
+      if (!open) c.classList.remove("hit", "miss");
+      c.setAttribute("aria-label", open ? `Літера ${game.letters[i]}` : "Закрита картка");
+    });
+  }
   const cardEl = (i) => $("grid").children[i];
-
-  function openCard(i) {
-    g.open.add(i);
-    const c = cardEl(i);
-    c.classList.add("open");
-    c.setAttribute("aria-label", `Літера ${g.letters[i]}`);
-  }
-  function closeCard(i) {
-    g.open.delete(i);
-    const c = cardEl(i);
-    c.classList.remove("open", "hit", "miss");
-    c.setAttribute("aria-label", "Закрита картка");
-  }
 
   $("grid").addEventListener("click", (e) => {
     const c = e.target.closest(".card");
-    if (!c || !g || isLocked()) return;
+    if (!c || !playing || isLocked()) return;
     const i = +c.dataset.i;
-    if (g.open.has(i)) return;
-    g.busy = true; renderBar();
-    openCard(i);
+    if (!game.openCard(i)) return;   // open cards ignore taps
+    busy = true; syncCards(); renderBar();
     later(() => resolve(i), TIME_PLAYER);
   });
 
   function resolve(i) {
-    const letter = g.letters[i], ch = lower(letter);
-    if (g.cpu) g.cpu.seen(letter, i);
-    const c = cardEl(i);
-    if (needed(g.secret).has(ch)) {
-      c.classList.add("hit");
-      g.found.add(ch);
-      renderWord();
+    if (cpu) cpu.remember(game.letters[i], i);
+    const result = game.resolve(i);
+
+    if (result === "miss") {
+      cardEl(i).classList.add("miss");
+      later(syncCards, 350);           // show the red frame, then flip back
     } else {
-      c.classList.add("miss");
-      later(() => { closeCard(i); }, 350);
-      g.turn = 1 - g.turn;
+      cardEl(i).classList.add("hit");
+      renderWord();
     }
 
-    const req = needed(g.secret);
-    if ([...req].every(x => g.found.has(x))) {
-      g.scores[g.turn] += 1;
-      g.won[g.turn].push(g.secret);
+    if (result === "wordCompleted") {
       renderBar();
-      const sc = $("g-score" + (g.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
-      sparkle(req.size + 1);
+      const sc = $("g-score" + (game.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
+      sparkle(game.needed.size + 1);
       later(nextWord, TIME_NEXT_WORD);
       return;
     }
-    g.busy = false;
+    busy = false;
     renderBar();
-    if (g.vsCPU && g.turn === 1) later(cpuMove, TIME_CPU_THINK);
+    if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK);
   }
 
   function nextWord() {
-    g.words.shift();
-    g.letters.forEach((_, i) => closeCard(i));
-    g.found.clear();
-    if (!g.words.length) { g.busy = false; return finish(); }
-    shuffle(g.words);
-    g.secret = g.words[0];
-    g.turn = 1 - g.turn;
-    if (g.cpu) g.cpu.forgetSome();
-    g.busy = false;
+    game.nextWord();
+    syncCards();
+    busy = false;
+    if (game.over) return finish();
+    if (cpu) cpu.newWordStarted();
     renderWord(); renderBar();
-    if (g.vsCPU && g.turn === 1) later(cpuMove, TIME_CPU_THINK + 500);
+    if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK + 500);
   }
 
   function cpuMove() {
-    if (!g || $("game").hidden) return;
-    g.busy = true;
-    const i = g.cpu.move(g);
-    openCard(i);
+    if (!playing) return;
+    const i = cpu.choose(game);
+    if (i === null || !game.openCard(i)) return;
+    busy = true; syncCards(); renderBar();
     later(() => resolve(i), TIME_CPU_OPEN);
   }
 
   function finish() {
-    const [a, b] = g.scores;
-    $("resTitle").textContent = a === b ? "Нічия!" : `Перемога: ${a > b ? g.names[0] : g.names[1]}`;
+    playing = false;
+    const w = game.winner, color = ["var(--p1)", "var(--p2)"];
+    const title = $("resTitle");
+    title.textContent = w === null ? "Нічия!" : `${game.players[w].name} перемагає!`;
+    title.style.color = w === null ? "var(--ink)" : color[w];
+    $("trophy").style.color = w === null ? "var(--yellow)" : color[w];
+    $("trophy").innerHTML = w === null ? ICON_DRAW : ICON_TROPHY;
+    $("finalScore").textContent = `${game.players[0].words.length} : ${game.players[1].words.length}`;
     [0, 1].forEach(p => {
-      $("r-score" + (p + 1)).textContent = g.scores[p];
-      $("r-name" + (p + 1)).textContent = g.names[p];
-      $("r-words" + (p + 1)).innerHTML = g.won[p].map(w => `<li>${w}</li>`).join("");
-      $("res" + (p + 1)).classList.toggle("winner", g.scores[p] > g.scores[1 - p]);
+      const pl = game.players[p];
+      $("r-name" + (p + 1)).textContent = pl.name;
+      $("r-score" + (p + 1)).textContent = `Карток: ${pl.words.length}`;
+      $("r-words" + (p + 1)).innerHTML = pl.words.length
+        ? pl.words.map(x => `<li>${x}</li>`).join("")
+        : `<li class="none">Жодного слова</li>`;
+      $("res" + (p + 1)).classList.toggle("winner", w === p);
     });
     show("results");
-    if (a !== b) sparkle(12);
+    sparkle(w === null ? 6 : 12);
   }
+
+  const ICON_TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1zM6 20h12v2H6z"/></svg>';
+  const ICON_DRAW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.3 6.2 19.8l1.6-6.6L2.6 8.8l6.8-.5z"/></svg>';
 
   $("newGame").addEventListener("click", startGame);
   $("again").addEventListener("click", startGame);
-  $("toStart").addEventListener("click", () => { clearTimers(); g = null; show("start"); });
-  $("toMenu").addEventListener("click", () => { clearTimers(); g = null; show("start"); });
+  $("toStart").addEventListener("click", stopGame);
+  $("toMenu").addEventListener("click", stopGame);
 
   // ---------- Sparkles (SparkleView.swift) ----------
   const fx = $("fx"), ctx = fx.getContext("2d");

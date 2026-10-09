@@ -7,7 +7,10 @@
 
 import Foundation
 
-struct Player {
-    var name: String = "Player"
-    var score: Int = 0
+struct Player: Equatable {
+    var name: String
+    /// Words this player collected, in the order they were won.
+    var collectedWords: [String] = []
+
+    var score: Int { collectedWords.count }
 }
