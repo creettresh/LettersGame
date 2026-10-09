@@ -1,15 +1,33 @@
-/* 
+/*
   Localizable.strings
   LettersGame_iOS
 
   Created by Volodymyr Yehorov on 17.04.2024.
-    
 */
 
-"New Game" = "Нова Гра";
-
-"Letters:" = "Літер:";
-"Letters in Game:" = "Літер у Грі:";
-
-"Words:" = "Слів:";
-"Words in Game:" = "Слів у Грі:";
+"Letters" = "Літери";
+"Player 1" = "Гравець 1";
+"Player 2" = "Гравець 2";
+"Computer" = "Комп'ютер";
+"Difficulty" = "Складність";
+"Easy" = "Легко";
+"Normal" = "Нормально";
+"Hard" = "Складно";
+"Orange deck" = "Помаранчева колода";
+"Green deck" = "Зелена колода";
+"Blue deck" = "Синя колода";
+"Purple deck" = "Фіолетова колода";
+"Letters in Game: %lld" = "Літер у грі: %lld";
+"Words in Game: %lld" = "Слів у грі: %lld";
+"New Game" = "Нова гра";
+"Choose at least one deck" = "Обери хоча б одну колоду";
+"Cards: %lld" = "Карток: %lld";
+"Words left" = "Слів лишилось";
+"Your turn" = "Твій хід";
+"Thinking…" = "Думає…";
+"Closed card" = "Закрита картка";
+"%@ wins!" = "%@ перемагає!";
+"Draw!" = "Нічия!";
+"No words" = "Жодного слова";
+"Menu" = "Меню";
+"Play Again" = "Грати ще";

@@ -1,15 +1,33 @@
-/* 
+/*
   Localizable.strings
   LettersGame_iOS
 
   Created by Volodymyr Yehorov on 17.04.2024.
-
 */
 
+"Letters" = "Letters";
+"Player 1" = "Player 1";
+"Player 2" = "Player 2";
+"Computer" = "Computer";
+"Difficulty" = "Difficulty";
+"Easy" = "Easy";
+"Normal" = "Normal";
+"Hard" = "Hard";
+"Orange deck" = "Orange deck";
+"Green deck" = "Green deck";
+"Blue deck" = "Blue deck";
+"Purple deck" = "Purple deck";
+"Letters in Game: %lld" = "Letters in Game: %lld";
+"Words in Game: %lld" = "Words in Game: %lld";
 "New Game" = "New Game";
-
-"Letters:" = "Letters:";
-"Letters in Game:" = "Letters in Game:";
-
-"Words:" = "Words:";
-"Words in Game:" = "Words in Game:";
+"Choose at least one deck" = "Choose at least one deck";
+"Cards: %lld" = "Cards: %lld";
+"Words left" = "Words left";
+"Your turn" = "Your turn";
+"Thinking…" = "Thinking…";
+"Closed card" = "Closed card";
+"%@ wins!" = "%@ wins!";
+"Draw!" = "Draw!";
+"No words" = "No words";
+"Menu" = "Menu";
+"Play Again" = "Play Again";

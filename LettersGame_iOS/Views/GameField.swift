@@ -6,197 +6,211 @@
 //
 
 import SwiftUI
-import Combine
 
+/// The game screen. Rules live in `GameData`; this view only adds timing:
+/// how long a card stays visible and how long the computer "thinks".
 struct GameField: View {
-    @Environment(GameData.self) var gameData
-    @Environment(AutoMovesAI.self) var CPU
-
-    @State private var selectionIndexes = IndexSet()
-    @State private var isHitTestingEnabled = true
-
-    @State private var isPlayer_1_turn = true
-    @State private var isPlayer_2_turn = false
-
-    private let timeDelayCPU = DispatchTimeInterval.milliseconds(1500)
-    private let timeDelayPlayer = DispatchTimeInterval.milliseconds(900)
-
-    @State var isSparkling = false
+    @Environment(GameData.self) private var game
+    @Environment(AutoMovesAI.self) private var cpu
+    @Environment(\.dismiss) private var dismiss
 
     let vsCPU: Bool
+    /// Starts a new game with the same players and decks.
+    let restart: () -> Void
 
-    func prepareNextPlayerMove() {
-        isPlayer_1_turn = !isPlayer_1_turn
-        isPlayer_2_turn = !isPlayer_1_turn
-    }
+    @State private var isBusy = false
+    @State private var isSparkling = false
+    @State private var showResults = false
+    @State private var goToMenu = false
+    /// The running move. Cancelled when the screen closes, so no timer fires afterwards.
+    @State private var moveTask: Task<Void, Never>?
 
-    private func makeCPUMoveIfNeededWith(delay: Int) {
-        if vsCPU && isPlayer_2_turn  {
-            let delayTime = DispatchTimeInterval.seconds(delay)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delayTime) {
-                makeCPUMove()
-            }
-        }
-    }
+    private let playerOpenDelay: Duration = .milliseconds(900)
+    private let cpuThinkDelay: Duration = .milliseconds(1000)
+    private let cpuOpenDelay: Duration = .milliseconds(1500)
+    private let nextWordDelay: Duration = .milliseconds(1400)
 
-    private func makeCPUMove() {
-        // Get index on field to open
-        let index = CPU.makeMove()
-        selectionIndexes.insert(index)
-
-        let letter = gameData.playingLetters[index]
-
-        // Deley how long card is open
-        DispatchQueue.main.asyncAfter(deadline: .now() + timeDelayCPU) {
-            chosenLetter(letter, by: index)
-        }
-    }
+    private var isCPUTurn: Bool { vsCPU && game.currentPlayerIndex == 1 }
 
     var body: some View {
         ZStack {
-            VStack {
-                HStack {
-                    Text(gameData.player_1.name)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .font(isPlayer_1_turn ? .title : .title2)
-                        .foregroundStyle(isPlayer_1_turn ? .purple : .gray)
-                    Spacer()
-                    Text("\(gameData.playingWords.count)")
-                        .frame(width: 40)
-                        .font(.title2)
-                    Spacer()
-                    Text(vsCPU ? CPU.name : gameData.player_2.name)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .font(isPlayer_2_turn ? .title : .title2)
-                        .foregroundStyle(isPlayer_2_turn ? .orange : .gray)
-                }
-
-                HStack {
-                    Text("Cards: \(gameData.player_1.score)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(isPlayer_1_turn ? .purple : .gray)
-                    Spacer()
-                    Text(gameData.secretWord)
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Spacer()
-                    Text("Cards: \(gameData.player_2.score)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(isPlayer_2_turn ? .orange : .gray)
-                }
-
-                let cards = CollectionView(selectionIndexes: $selectionIndexes, items: gameData.playingLetters)
-                cards
-                    .onReceive(cards.letterPublisher, perform: { letterView in
-                        isHitTestingEnabled = false
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + timeDelayPlayer) {
-                            userChoseLetter(letterView.letter, by: letterView.index)
-                            isHitTestingEnabled = true // enable hit testing
-                        }
-                    })
-                    .onAppear {
-                        resetGame()
-                    }
+            VStack(spacing: 12) {
+                header
+                secretWordView
+                CollectionView(items: game.letters, openIndexes: game.openIndexes, onTap: playerTapped)
             }
             .padding()
-            .allowsHitTesting(isHitTestingEnabled)
+            .allowsHitTesting(!isBusy && !isCPUTurn)
 
             if isSparkling {
-                let sparkleView = SparkleView(isAnimating: $isSparkling,
-                    birthRate: Float(gameData.answers.count) + 1)
-                sparkleView
+                SparkleView(isAnimating: $isSparkling, birthRate: Float(game.neededLetters.count) + 1)
                     .allowsHitTesting(false)
             }
         }
-        .onAppear {
-            if vsCPU {
-                CPU.prepareToGameWithLetters(count: gameData.playingLetters.count, secretWord: gameData.secretWord)
+        .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            moveTask?.cancel()
+        }
+        .fullScreenCover(isPresented: $showResults, onDismiss: {
+            if goToMenu { dismiss() }
+        }) {
+            ResultsView(players: game.players,
+                        winnerIndex: game.winnerIndex,
+                        onPlayAgain: {
+                            goToMenu = false
+                            showResults = false
+                            restart()
+                        },
+                        onMenu: {
+                            goToMenu = true
+                            showResults = false
+                        })
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            playerBadge(0)
+            VStack(spacing: 0) {
+                Text(verbatim: "\(game.remainingWords.count)")
+                    .font(.title2.bold())
+                    .monospacedDigit()
+                Text("Words left")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize()
+            playerBadge(1)
+        }
+    }
+
+    private func playerBadge(_ index: Int) -> some View {
+        let isActive = game.currentPlayerIndex == index && !game.isGameOver
+        let color: Color = index == 0 ? .purple : .orange
+        let alignment: HorizontalAlignment = index == 0 ? .leading : .trailing
+
+        return VStack(alignment: alignment, spacing: 2) {
+            Text(verbatim: game.players[index].name)
+                .font(isActive ? .title : .title2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text("Cards: \(game.players[index].score)")
+                .font(.headline)
+                .monospacedDigit()
+            Group {
+                if isActive {
+                    Text(vsCPU && index == 1 ? "Thinking…" as LocalizedStringKey : "Your turn")
+                } else {
+                    Text(verbatim: " ")
+                }
+            }
+            .font(.caption)
+        }
+        .foregroundStyle(isActive ? color : .gray)
+        .frame(maxWidth: .infinity, alignment: index == 0 ? .leading : .trailing)
+        .animation(.easeInOut, value: isActive)
+    }
+
+    // MARK: - Secret word
+
+    /// The word with every found letter turned green, so children see what's still missing.
+    private var secretWordView: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(game.secretWord.enumerated()), id: \.offset) { _, character in
+                let letter = String(character)
+                let isLetter = !letter.gameLetters.isEmpty
+                let isFound = game.foundLetters.contains(letter.lowercased())
+
+                Text(verbatim: letter)
+                    .font(.system(.largeTitle, design: .rounded).bold())
+                    .foregroundStyle(isFound ? Color.green : Color.primary)
+                    .padding(.bottom, 4)
+                    .overlay(alignment: .bottom) {
+                        if isLetter {
+                            Capsule()
+                                .fill(isFound ? Color.green : Color.secondary.opacity(0.35))
+                                .frame(height: 4)
+                        }
+                    }
+                    .animation(.spring, value: isFound)
             }
         }
-        .disabled(vsCPU && isPlayer_2_turn)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: game.secretWord))
     }
 
-    private func userChoseLetter(_ letter: String, by index : Int) {
-        chosenLetter(letter, by: index)
+    // MARK: - Moves
+
+    private func playerTapped(_ index: Int) {
+        guard !isBusy, !isCPUTurn, game.open(index) else { return }
+        isBusy = true
+        startMove {
+            try await Task.sleep(for: playerOpenDelay)
+            try await resolve(index)
+        }
     }
 
-    private func chosenLetter(_ letter: String, by index : Int) {
+    private func startMove(_ operation: @escaping @MainActor () async throws -> Void) {
+        moveTask?.cancel()
+        moveTask = Task { @MainActor in
+            do {
+                try await operation()
+            } catch {
+                // Cancelled: the screen was closed mid-move.
+                isBusy = false
+            }
+        }
+    }
+
+    @MainActor
+    private func resolve(_ index: Int) async throws {
         isSparkling = false
-
         if vsCPU {
-            CPU.letterWasOpened(letter: letter, by: index)
+            cpu.remember(letter: game.letters[index], at: index)
         }
 
-        // Check if right char was opened
-        if gameData.isSecretWordContains(letter) {
-            if !gameData.answers.contains(letter) {
-                gameData.answers.append(letter)
+        if game.resolve(index) == .wordCompleted {
+            isSparkling = true
+            try await Task.sleep(for: nextWordDelay)
+            game.nextWord()
+
+            if game.isGameOver {
+                isBusy = false
+                showResults = true
+                return
             }
-        }
-        else {
-            selectionIndexes.remove(index)
-
-            prepareNextPlayerMove()
-        }
-
-        // Check if all chars for secret word were found
-        if  gameData.isAllCharsFound() {
-            if isPlayer_1_turn {
-                gameData.player_1.score += 1
-            }
-            else {
-                gameData.player_2.score += 1
-            }
-
-            isSparkling.toggle()
-            DispatchQueue.main.asyncAfter(deadline: .now() + timeDelayPlayer) {
-                nextRound()
-                resetGame()
-            }
-        }
-        else {
-            // CPU move
-            makeCPUMoveIfNeededWith(delay: 1)
-        }
-    }
-
-// MARK: -
-
-    private func nextRound() {
-        // Get new word or game is over
-        if gameData.setupNewSecretWord() {
-            prepareNextPlayerMove()
             if vsCPU {
-                CPU.setupNew(secretWord: gameData.secretWord)
-                makeCPUMoveIfNeededWith(delay: 3)
+                cpu.newWordStarted()
             }
         }
-        else {
-            // TODO: - make show detail
 
-//            NavigationLink {
-//                ResultsView()
-//                    .environment(gameData)
-//            } label: {
-//                Text("New Game")
-//                    .font(isNewGameAvailable ? .title : .title2)
-//                    .foregroundStyle(isNewGameAvailable ? .green : .gray)
-//            }
-
+        isBusy = false
+        if isCPUTurn {
+            try await cpuMove()
         }
     }
 
-    private func resetGame() {
-        selectionIndexes.removeAll()
-        gameData.answers.removeAll()
+    @MainActor
+    private func cpuMove() async throws {
+        isBusy = true
+        try await Task.sleep(for: cpuThinkDelay)
+        guard let index = cpu.chooseCard(in: game), game.open(index) else {
+            isBusy = false
+            return
+        }
+        try await Task.sleep(for: cpuOpenDelay)
+        try await resolve(index)
     }
 }
 
 #Preview {
-    GameField(vsCPU: false)
-        .environment(GameData())
-        .environment(AutoMovesAI())
+    let game = GameData()
+    game.start(decks: [.orange], playerNames: ["Оля", "Тато"])
+    return NavigationStack {
+        GameField(vsCPU: false, restart: {})
+            .environment(game)
+            .environment(AutoMovesAI())
+    }
 }
