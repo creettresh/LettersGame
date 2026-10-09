@@ -196,10 +196,41 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .sound-row { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .sound-row .switch { padding-left: 0; }
 .voice-note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.voice-note a { color: var(--blue); font-weight: 700; }
 .final .winner { box-shadow: 0 0 0 3px currentColor, var(--shadow); }
 .row-btns { display: flex; gap: 10px; }
 .row-btns button { flex: 1; }
 .secondary { border: 2px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px; font-weight: 800; font-size: 17px; }
+
+/* ---------- Online ---------- */
+.join-row { display: flex; gap: 8px; }
+.join-row input {
+  width: 7.5em; min-width: 0; font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  letter-spacing: .2em; text-align: center; color: var(--ink); background: var(--bg);
+  border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; font-variant-numeric: tabular-nums;
+}
+.join-row input:focus { border-color: var(--line); outline: none; }
+.join-row button { flex: 1; }
+.online-btns { display: flex; flex-direction: column; gap: 10px; }
+.secondary:disabled { opacity: .45; cursor: not-allowed; }
+#lobby { justify-content: center; max-width: 480px; }
+.lobby-card { align-items: center; text-align: center; gap: 14px; padding: 24px 18px; }
+.room-code {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(44px, 14vw, 64px); letter-spacing: .12em;
+  font-variant-numeric: tabular-nums; color: var(--blue); line-height: 1;
+}
+.lobby-text { margin: 0; font-size: 16px; line-height: 1.45; text-wrap: balance; }
+.lobby-text.error { color: #c4322b; font-weight: 700; }
+.share { display: flex; gap: 8px; width: 100%; }
+.share input {
+  flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--muted); background: var(--bg);
+  border: 0; border-radius: 10px; padding: 10px;
+}
+.share button { padding: 10px 14px; font-size: 15px; }
+.lobby-card .primary, .lobby-card > .secondary { width: 100%; box-sizing: border-box; }
+.dots::after { content: ""; animation: dots 1.4s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+.again-note { margin: 0; color: var(--muted); font-weight: 700; }
 
 canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 @media (prefers-reduced-motion: reduce) {
@@ -255,6 +286,34 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
 
   <button class="primary" id="newGame" disabled>Нова гра</button>
   <p class="hint" id="startHint">Обери хоча б одну колоду</p>
+
+  <div class="panel" id="onlinePanel">
+    <span class="label">Гра через інтернет</span>
+    <p class="voice-note">Кожен грає на своєму телефоні чи комп'ютері. Один створює кімнату з вибраними колодами, другий вводить її код.</p>
+    <div class="online-btns">
+      <button class="secondary" id="hostBtn" type="button">Створити кімнату</button>
+      <div class="join-row">
+        <input id="joinCode" inputmode="numeric" maxlength="4" placeholder="Код" autocomplete="off" aria-label="Код кімнати">
+        <button class="secondary" id="joinBtn" type="button">Приєднатися</button>
+      </div>
+    </div>
+    <p class="voice-note" id="onlineNote" hidden></p>
+  </div>
+</section>
+
+<!-- LOBBY -->
+<section class="screen" id="lobby" hidden>
+  <div class="panel lobby-card">
+    <span class="label" id="lobbyLabel">Гра через інтернет</span>
+    <div class="room-code" id="roomCode" hidden></div>
+    <p class="lobby-text" id="lobbyText"></p>
+    <div class="share" id="shareBox" hidden>
+      <input id="shareLink" readonly aria-label="Посилання-запрошення">
+      <button class="secondary" id="copyLink" type="button">Копіювати</button>
+    </div>
+    <button class="primary" id="lobbyStart" type="button" hidden>Почати гру</button>
+    <button class="secondary" id="lobbyCancel" type="button">Скасувати</button>
+  </div>
 </section>
 
 <!-- GAME -->
@@ -287,8 +346,10 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     <button class="secondary" id="toStart" type="button">Меню</button>
     <button class="primary" id="again" type="button">Грати ще</button>
   </div>
+  <p class="again-note" id="againNote" hidden></p>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
 <script>
 (() => {
   // ---------- Data (from ModelData.swift) ----------
@@ -315,7 +376,9 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     "Чиж": "🐤", "Карп": "🐟", "Щука": "🐟",
   };
   const APOS = /[ʼ'’]/;
-  const TIME_PLAYER = 900, TIME_CPU_OPEN = 1500, TIME_CPU_THINK = 1000, TIME_NEXT_WORD = 1400;
+  const SPEED = Number(window.__LG_SPEED) || 1;   // tests run the game faster
+  const TIME_PLAYER = 900 * SPEED, TIME_CPU_OPEN = 1500 * SPEED, TIME_CPU_THINK = 1000 * SPEED, TIME_NEXT_WORD = 1400 * SPEED;
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
   const $ = (id) => document.getElementById(id);
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -339,6 +402,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     muted: !!saved.muted,
   };
   const save = () => store.set({ ...settings, decks: [...settings.decks] });
+  let onlineReady = false;   // set once the online section below has run
 
   // ---------- Start screen ----------
   const name1 = $("name1"), name2 = $("name2"), cpuToggle = $("cpuToggle"), levels = $("levels");
@@ -389,6 +453,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     $("cntWords").textContent = p.words.length;
     $("newGame").disabled = p.words.length === 0;
     $("startHint").hidden = p.words.length > 0;
+    if (onlineReady) renderOnline();
   }
   renderCpu(); renderDecks();
 
@@ -553,26 +618,38 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   // ENGINE-END
 
   // ---------- Game screen: timing and drawing; rules live in Engine ----------
+  // Three ways to play: "local" (one device, maybe vs computer), "host" and "guest" (online).
+  // Online, the host's device runs the game; the guest sends taps and mirrors the host's state.
   const game = new Engine();
   let cpu = null, vsCPU = false, busy = false, playing = false;
   const timers = new Set();
   const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
   const clearTimers = () => { timers.forEach(clearTimeout); timers.clear(); };
 
-  function show(id) { ["start", "game", "results"].forEach(s => $(s).hidden = s !== id); }
+  function show(id) { ["start", "lobby", "game", "results"].forEach(s => $(s).hidden = s !== id); }
 
   function startGame() {
+    if (net.mode === "guest") return;              // only the host starts online games
     clearTimers();
     sfx.unlock();
     voice.prime();
     const p = pool();
-    vsCPU = settings.cpu;
+    const online = net.mode === "host";
+    vsCPU = !online && settings.cpu;
     cpu = vsCPU ? new CPU(settings.level) : null;
-    game.start(shuffle([...p.letters]), shuffle([...p.words]),
-      [settings.name1 || "Гравець 1", vsCPU ? "Комп'ютер" : (settings.name2 || "Гравець 2")]);
+    const second = online ? net.guestName : (vsCPU ? "Комп'ютер" : (settings.name2 || "Гравець 2"));
+    game.start(shuffle([...p.letters]), shuffle([...p.words]), [settings.name1 || "Гравець 1", second]);
     busy = false; playing = true;
+    enterGame();
+    net.send("start");
+  }
+
+  function enterGame() {
     $("g-name1").textContent = game.players[0].name;
     $("g-name2").textContent = game.players[1].name;
+    $("again").hidden = net.mode === "guest";
+    $("againNote").hidden = net.mode !== "guest";
+    $("againNote").textContent = `Нову гру починає ${game.players[0].name}.`;
     buildGrid(); renderBar(); renderWord();
     show("game"); layout();
     announceWord(300);
@@ -581,7 +658,11 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   // Says which word to look for, e.g. "Шукаємо: Лев".
   function announceWord(delay = 0) { voice.say(`Шукаємо: ${game.secret}`, delay); }
 
-  function stopGame() { clearTimers(); voice.stop(); playing = false; busy = false; show("start"); }
+  function stopGame() {
+    clearTimers(); voice.stop(); playing = false; busy = false;
+    net.leave();
+    show("start");
+  }
 
   function buildGrid() {
     const grid = $("grid");
@@ -590,7 +671,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       const b = document.createElement("button");
       b.type = "button"; b.className = "card"; b.dataset.i = i;
       b.setAttribute("aria-label", "Закрита картка");
-      b.innerHTML = `<span class="inner"><span class="back"></span><span class="face">${l}</span></span>`;
+      b.innerHTML = `<span class="inner"><span class="back"></span><span class="face">${esc(l)}</span></span>`;
       grid.appendChild(b);
     });
   }
@@ -616,13 +697,21 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   addEventListener("resize", layout);
 
   const isCPUTurn = () => vsCPU && game.turn === 1;
-  const isLocked = () => busy || isCPUTurn();
+  const myIndex = () => net.mode === "guest" ? 1 : 0;
+  const isRemoteTurn = () => net.mode !== "local" && game.turn !== myIndex();
+  const isLocked = () => busy || isCPUTurn() || isRemoteTurn();
 
   function renderBar() {
     [0, 1].forEach(p => {
       const active = game.turn === p && !game.over;
+      let label = "";
+      if (active) {
+        if (vsCPU && p === 1) label = "думає…";
+        else if (net.mode !== "local" && p !== myIndex()) label = "ходить…";
+        else label = "твій хід";
+      }
       $("side" + (p + 1)).classList.toggle("active", active);
-      $("turn" + (p + 1)).textContent = active ? (vsCPU && p === 1 ? "думає…" : "твій хід") : "";
+      $("turn" + (p + 1)).textContent = label;
       $("g-score" + (p + 1)).textContent = `Карток: ${game.players[p].words.length}`;
     });
     $("wordsLeft").textContent = game.remaining.length;
@@ -657,67 +746,95 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     });
   }
   const cardEl = (i) => $("grid").children[i];
-  function cardOpened(i) { sfx.play("flip"); voice.say(lower(game.letters[i])); }
 
   $("grid").addEventListener("click", (e) => {
     const c = e.target.closest(".card");
     if (!c || !playing || isLocked()) return;
     const i = +c.dataset.i;
-    if (!game.openCard(i)) return;   // open cards ignore taps
-    busy = true; syncCards(); renderBar(); cardOpened(i);
-    later(() => resolve(i), TIME_PLAYER);
+    if (game.open.has(i)) return;                  // open cards ignore taps
+    if (net.mode === "guest") {                    // the host decides; its answer unlocks us
+      busy = true; renderBar();
+      net.toHost({ t: "open", i });
+      return;
+    }
+    openCard(i, TIME_PLAYER);
   });
+
+  // ----- Moves (local and host). Each step updates the screen, then tells the guest. -----
+
+  function openCard(i, delay) {
+    if (!game.openCard(i)) return false;
+    busy = true;
+    showFlip(i);
+    net.send("flip", { i });
+    later(() => resolve(i), delay);
+    return true;
+  }
 
   function resolve(i) {
     if (cpu) cpu.remember(game.letters[i], i);
     const result = game.resolve(i);
-
-    if (result === "miss") {
-      sfx.play("miss");
-      cardEl(i).classList.add("miss");
-      later(syncCards, 350);           // show the red frame, then flip back
-    } else {
-      cardEl(i).classList.add("hit");
-      renderWord();
-      if (result === "hit") sfx.play("hit");
-    }
-
-    if (result === "wordCompleted") {
-      renderBar();
-      const sc = $("g-score" + (game.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
-      sparkle(game.needed.size + 1);
-      sfx.play("word");
-      voice.say(`${game.secret}!`, 350);
-      const pic = $("pic"); if (pic) pic.classList.add("cheer");
-      later(nextWord, TIME_NEXT_WORD + 600);
-      return;
-    }
-    busy = false;
-    renderBar();
+    if (result !== "wordCompleted") busy = false;
+    showResult(i, result);
+    net.send("result", { i, result });
+    if (result === "wordCompleted") { later(nextWord, TIME_NEXT_WORD + 600); return; }
     if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK);
   }
 
   function nextWord() {
     game.nextWord();
-    syncCards();
     busy = false;
-    if (game.over) return finish();
-    if (cpu) cpu.newWordStarted();
-    renderWord(); renderBar();
-    announceWord();
+    if (cpu && !game.over) cpu.newWordStarted();
+    net.send("next");
+    if (game.over) { syncCards(); finish(); return; }
+    showNext();
     if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK + 900);
   }
 
   function cpuMove() {
     if (!playing) return;
     const i = cpu.choose(game);
-    if (i === null || !game.openCard(i)) return;
-    busy = true; syncCards(); renderBar(); cardOpened(i);
-    later(() => resolve(i), TIME_CPU_OPEN);
+    if (i !== null) openCard(i, TIME_CPU_OPEN);
   }
 
   function finish() {
     playing = false;
+    net.send("over");
+    showResults();
+  }
+
+  // ----- What every step looks and sounds like (both devices) -----
+
+  function showFlip(i) {
+    syncCards(); renderBar();
+    sfx.play("flip");
+    voice.say(lower(game.letters[i]));
+  }
+
+  function showResult(i, result) {
+    const c = cardEl(i);
+    if (result === "miss") {
+      sfx.play("miss");
+      if (c) c.classList.add("miss");
+      later(syncCards, 350);           // show the red frame, then flip back
+    } else if (result === "hit" || result === "wordCompleted") {
+      if (c) c.classList.add("hit");
+      renderWord();
+      if (result === "hit") sfx.play("hit");
+    }
+    renderBar();
+    if (result === "wordCompleted") {
+      const sc = $("g-score" + (game.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
+      sparkle(game.needed.size + 1);
+      sfx.play("word");
+      voice.say(`${game.secret}!`, 350);
+      const pic = $("pic"); if (pic) pic.classList.add("cheer");
+    }
+  }
+
+  function showNext() { syncCards(); renderWord(); renderBar(); announceWord(); }
+
+  function showResults() {
     const w = game.winner, color = ["var(--p1)", "var(--p2)"];
     const title = $("resTitle");
     title.textContent = w === null ? "Нічия!" : `${game.players[w].name} перемагає!`;
@@ -730,7 +847,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       $("r-name" + (p + 1)).textContent = pl.name;
       $("r-score" + (p + 1)).textContent = `Карток: ${pl.words.length}`;
       $("r-words" + (p + 1)).innerHTML = pl.words.length
-        ? pl.words.map(x => `<li>${EMOJI[x] || ""} ${x}</li>`).join("")
+        ? pl.words.map(x => `<li>${EMOJI[x] || ""} ${esc(x)}</li>`).join("")
         : `<li class="none">Жодного слова</li>`;
       $("res" + (p + 1)).classList.toggle("winner", w === p);
     });
@@ -743,10 +860,262 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   const ICON_TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1zM6 20h12v2H6z"/></svg>';
   const ICON_DRAW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.3 6.2 19.8l1.6-6.6L2.6 8.8l6.8-.5z"/></svg>';
 
-  $("newGame").addEventListener("click", startGame);
+  $("newGame").addEventListener("click", () => { net.leave(); startGame(); });
   $("again").addEventListener("click", startGame);
   $("toStart").addEventListener("click", stopGame);
   $("toMenu").addEventListener("click", stopGame);
+
+  // ---------- Online play ----------
+  // The transport only moves messages between two devices. It's WebRTC (PeerJS) for now;
+  // another transport (e.g. Firebase) can replace it without touching the game.
+  const PEER_PREFIX = "lettersgame-uk-room-";
+  const PAGES_URL = "https://creettresh.github.io/LettersGame/";
+  const peerTransport = {
+    available() {
+      // Claude's page viewer blocks WebRTC, so online play needs the GitHub Pages copy.
+      if (/claude|anthropic/i.test(location.hostname)) return false;
+      return typeof window.Peer === "function" && typeof window.RTCPeerConnection !== "undefined";
+    },
+    // Opens a room. Calls back: onReady(), onGuest(link), onError(kind)
+    host(code, on) {
+      const peer = new window.Peer(PEER_PREFIX + code, { debug: 0 });
+      const link = { peer, conn: null };
+      peer.on("open", () => on.ready());
+      peer.on("connection", (conn) => {
+        if (link.conn) { conn.on("open", () => { try { conn.send({ t: "full" }); conn.close(); } catch {} }); return; }
+        link.conn = conn;
+        conn.on("open", () => on.guest());
+        conn.on("data", (d) => on.data(d));
+        conn.on("close", () => on.closed());
+        conn.on("error", () => on.closed());
+      });
+      peer.on("error", (e) => on.error(e && e.type === "unavailable-id" ? "taken" : "network"));
+      return link;
+    },
+    join(code, on) {
+      const peer = new window.Peer({ debug: 0 });
+      const link = { peer, conn: null };
+      peer.on("open", () => {
+        const conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "json" });
+        link.conn = conn;
+        conn.on("open", () => on.connected());
+        conn.on("data", (d) => on.data(d));
+        conn.on("close", () => on.closed());
+        conn.on("error", () => on.closed());
+      });
+      peer.on("error", (e) => on.error(e && e.type === "peer-unavailable" ? "no-room" : "network"));
+      return link;
+    },
+    send(link, msg) { try { if (link && link.conn && link.conn.open) link.conn.send(msg); } catch {} },
+    close(link) {
+      if (!link) return;
+      try { link.conn && link.conn.close(); } catch {}
+      try { link.peer && link.peer.destroy(); } catch {}
+    },
+  };
+
+  const net = {
+    mode: "local",            // "local" | "host" | "guest"
+    transport: peerTransport,
+    link: null,
+    code: "",
+    guestName: "Гравець 2",
+    connectTimer: null,
+    session: 0,               // bumps on every room; events from an older room are ignored
+
+    // Host -> guest: what just happened plus the full state after it.
+    send(type, extra = {}) {
+      if (this.mode !== "host") return;
+      this.transport.send(this.link, { t: type, s: snapshot(), ...extra });
+    },
+    toHost(msg) { if (this.mode === "guest") this.transport.send(this.link, msg); },
+    leave() {
+      if (this.mode === "local") return;
+      this.transport.send(this.link, { t: "bye" });
+      const link = this.link;
+      this.mode = "local"; this.link = null; this.session++;
+      clearTimeout(this.connectTimer);
+      setTimeout(() => this.transport.close(link), 200);   // let "bye" go out first
+    },
+  };
+
+  function snapshot() {
+    return {
+      letters: game.letters, remaining: game.remaining, players: game.players, turn: game.turn,
+      open: [...game.open], found: [...game.found], secret: game.secret, over: game.over, busy,
+    };
+  }
+  // The guest trusts only the shape of what arrives; text is shown with textContent or escaped.
+  function applySnapshot(s) {
+    if (!s || !Array.isArray(s.letters) || !Array.isArray(s.players) || s.players.length !== 2) return false;
+    game.letters = s.letters.map(String);
+    game.remaining = (s.remaining || []).map(String);
+    game.players = s.players.map(p => ({ name: String(p && p.name || "").slice(0, 16) || "Гравець",
+                                         words: Array.isArray(p && p.words) ? p.words.map(String) : [] }));
+    game.turn = s.turn === 1 ? 1 : 0;
+    game.open = new Set((s.open || []).map(Number));
+    game.found = new Set((s.found || []).map(String));
+    game.secret = String(s.secret || "");
+    game.over = !!s.over;
+    busy = !!s.busy;
+    return true;
+  }
+
+  function onlineSupported() { return net.transport.available(); }
+
+  // Wraps transport callbacks so a closing old connection can't disturb the current one.
+  function forSession(handlers) {
+    const id = ++net.session;
+    const out = {};
+    for (const [k, fn] of Object.entries(handlers)) out[k] = (...a) => { if (net.session === id) fn(...a); };
+    return out;
+  }
+
+  function renderOnline() {
+    const hasWords = pool().words.length > 0;
+    const ok = onlineSupported();
+    $("hostBtn").disabled = !ok || !hasWords;
+    $("joinBtn").disabled = !ok;
+    $("joinCode").disabled = !ok;
+    const note = $("onlineNote");
+    if (!ok) {
+      note.hidden = false;
+      note.innerHTML = 'Онлайн-гра тут недоступна. Відкрий гру за адресою <a href="' + PAGES_URL + '" target="_blank" rel="noopener">creettresh.github.io/LettersGame</a>.';
+    } else if (!hasWords) {
+      note.hidden = false;
+      note.textContent = "Щоб створити кімнату, спершу обери колоди вище.";
+    } else note.hidden = true;
+  }
+
+  function lobby({ label = "Гра через інтернет", code = "", text = "", error = false, link = "", canStart = false, cancel = "Скасувати", waiting = false }) {
+    $("lobbyLabel").textContent = label;
+    $("roomCode").hidden = !code; $("roomCode").textContent = code;
+    const t = $("lobbyText");
+    t.textContent = text; t.classList.toggle("error", error); t.classList.toggle("dots", waiting);
+    $("shareBox").hidden = !link; $("shareLink").value = link;
+    $("lobbyStart").hidden = !canStart;
+    $("lobbyCancel").textContent = cancel;
+    show("lobby");
+  }
+
+  function hostRoom(attempt = 0) {
+    if (!onlineSupported() || !pool().words.length) return;
+    sfx.unlock(); voice.prime();
+    net.leave();
+    const code = String(1000 + Math.floor(Math.random() * 9000));
+    net.mode = "host"; net.code = code; net.guestName = "Гравець 2";
+    const link = location.origin + location.pathname + "#" + code;
+    lobby({ label: "Твоя кімната", code, text: "З'єднуюся з сервером", waiting: true });
+    net.link = net.transport.host(code, forSession({
+      ready: () => lobby({ label: "Твоя кімната", code, link,
+        text: "Надішли код або посилання суперникові. Чекаю, поки він під'єднається", waiting: true }),
+      guest: () => lobby({ label: "Твоя кімната", code, text: "Суперник під'єднується", waiting: true }),
+      data: onHostData,
+      closed: () => connectionLost("Суперник від'єднався."),
+      error: (kind) => {
+        if (net.mode !== "host") return;
+        if (kind === "taken" && attempt < 3) { hostRoom(attempt + 1); return; }
+        lobby({ text: "Не вдалося створити кімнату. Перевір інтернет і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      },
+    }));
+  }
+
+  function onHostData(d) {
+    if (net.mode !== "host" || !d || typeof d !== "object") return;
+    if (d.t === "hello") {
+      net.guestName = String(d.name || "").trim().slice(0, 16) || "Гравець 2";
+      if (!playing) lobby({ label: "Твоя кімната", code: net.code, text: `${net.guestName} у кімнаті. Можна починати!`, canStart: true });
+    } else if (d.t === "open") {
+      const i = Number(d.i);
+      // Accept only the guest's own turn; otherwise resend the state so the guest unlocks.
+      if (!(playing && !busy && game.turn === 1 && openCard(i, TIME_PLAYER))) net.send("sync");
+    } else if (d.t === "bye") {
+      connectionLost("Суперник вийшов з гри.");
+    }
+  }
+
+  function joinRoom() {
+    if (!onlineSupported()) return;
+    const code = $("joinCode").value.replace(/\D/g, "").slice(0, 4);
+    if (code.length !== 4) { $("joinCode").focus(); return; }
+    sfx.unlock(); voice.prime();
+    net.leave();
+    net.mode = "guest"; net.code = code;
+    lobby({ label: `Кімната ${code}`, text: "Під'єднуюся", waiting: true });
+    clearTimeout(net.connectTimer);
+    net.connectTimer = setTimeout(() => {
+      if (net.mode === "guest" && !playing) {
+        lobby({ text: "Не вдалося під'єднатися. Перевір код і що кімната ще відкрита, і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      }
+    }, 20000);
+    net.link = net.transport.join(code, forSession({
+      connected: () => {
+        clearTimeout(net.connectTimer);
+        net.toHost({ t: "hello", name: settings.name1 || "Гравець 2" });
+        lobby({ label: `Кімната ${code}`, text: "Під'єднано! Чекаємо, поки суперник почне гру", waiting: true });
+      },
+      data: onGuestData,
+      closed: () => connectionLost("Зв'язок із суперником втрачено."),
+      error: (kind) => {
+        if (net.mode !== "guest") return;
+        clearTimeout(net.connectTimer);
+        lobby({ text: kind === "no-room" ? "Кімнату з таким кодом не знайдено. Перевір код." :
+                      "Не вдалося під'єднатися. Перевір інтернет і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      },
+    }));
+  }
+
+  function onGuestData(d) {
+    if (net.mode !== "guest" || !d || typeof d !== "object") return;
+    if (d.t === "bye") { connectionLost("Суперник вийшов з гри."); return; }
+    if (d.t === "full") { lobby({ text: "У цій кімнаті вже грають двоє.", error: true, cancel: "До меню" }); net.leave(); return; }
+    if (!applySnapshot(d.s)) return;
+    const i = Number(d.i);
+    switch (d.t) {
+      case "start":
+        clearTimers(); vsCPU = false; cpu = null; playing = true;
+        enterGame();
+        break;
+      case "flip": if (playing) showFlip(i); break;
+      case "result": if (playing) showResult(i, String(d.result)); break;
+      case "next": if (playing) { if (game.over) syncCards(); else showNext(); } break;
+      case "over": playing = false; showResults(); break;
+      case "sync": if (playing) { syncCards(); renderBar(); } break;
+    }
+  }
+
+  function connectionLost(message) {
+    if (net.mode === "local") return;          // we left on purpose
+    clearTimers(); voice.stop(); playing = false; busy = false;
+    net.leave();
+    lobby({ text: message, error: true, cancel: "До меню" });
+  }
+
+  $("hostBtn").addEventListener("click", () => hostRoom());
+  $("joinBtn").addEventListener("click", joinRoom);
+  $("joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") joinRoom(); });
+  $("joinCode").addEventListener("input", () => { $("joinCode").value = $("joinCode").value.replace(/\D/g, "").slice(0, 4); });
+  $("lobbyStart").addEventListener("click", startGame);
+  $("lobbyCancel").addEventListener("click", stopGame);
+  $("copyLink").addEventListener("click", () => {
+    const input = $("shareLink"), btn = $("copyLink");
+    const done = () => { btn.textContent = "Скопійовано"; setTimeout(() => btn.textContent = "Копіювати", 1500); };
+    try {
+      navigator.clipboard.writeText(input.value).then(done, () => { input.select(); });
+    } catch { input.select(); }
+  });
+
+  // An invite link like ".../#4827" fills in the code; joining still needs one tap (for sound).
+  const invite = (location.hash || "").replace("#", "");
+  if (/^\d{4}$/.test(invite)) { $("joinCode").value = invite; }
+  onlineReady = true;
+  renderOnline();
+  // PeerJS loads after this script; check again once the page has finished loading.
+  addEventListener("load", renderOnline);
+  addEventListener("beforeunload", () => net.leave());
 
   // ---------- Sparkles (SparkleView.swift) ----------
   const fx = $("fx"), ctx = fx.getContext("2d");
