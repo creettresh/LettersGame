@@ -46,39 +46,70 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .screen { height: 100%; display: flex; flex-direction: column; padding: 16px; padding-block: 12px; box-sizing: border-box; max-width: 1100px; margin: 0 auto; }
 .screen[hidden] { display: none !important; }
 
-/* ---------- Start screen ---------- */
-#start { overflow-y: auto; gap: 18px; align-items: stretch; max-width: 560px; }
-.brand { display: flex; align-items: center; gap: 12px; padding-top: 8px; }
-.brand-cards { display: flex; }
+/* ---------- Start screen ----------
+   Phone: one column (decks, this device, online). Tablet: decks on top, two below.
+   Laptop: three columns side by side, so the whole menu fits without scrolling. */
+#start { overflow-y: auto; gap: 12px; max-width: 1120px; padding-block: 14px; }
+.start-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-cards { display: flex; flex: none; }
 .brand-cards span {
-  width: 34px; height: 45px; border-radius: 7px; display: grid; place-items: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 20px; box-shadow: var(--shadow);
+  width: 30px; height: 40px; border-radius: 7px; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 18px; box-shadow: var(--shadow);
 }
 .brand-cards span:nth-child(1) { background: linear-gradient(45deg, var(--yellow), var(--blue)); transform: rotate(-8deg); }
 .brand-cards span:nth-child(2) { background: var(--card-face); color: #1f5fd6; margin-left: -8px; transform: rotate(6deg); }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 6vw, 34px); margin: 0; letter-spacing: -.01em; }
-.tagline { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
-.panel { background: var(--surface); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(22px, 5vw, 30px); margin: 0; letter-spacing: -.01em; }
+.tagline { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; max-width: 70ch; }
+.head-tools { display: flex; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); background: var(--surface);
+  border-radius: 999px; padding: 5px 12px 5px 8px; font-weight: 800; font-size: 14px; color: var(--muted);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.chip svg { width: 18px; height: 18px; flex: none; }
+.chip .off { display: none; }
+.chip[aria-pressed="true"] { color: var(--blue); border-color: var(--blue); }
+.chip[aria-pressed="false"] .on { display: none; }
+.chip[aria-pressed="false"] .off { display: block; }
+
+.start-grid {
+  display: grid; gap: 12px; align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "decks" "local" "online";
+}
+.area-decks { grid-area: decks; }
+.area-local { grid-area: local; }
+.area-online { grid-area: online; }
+@media (min-width: 640px) {
+  .start-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "decks decks" "local online"; }
+}
+@media (min-width: 980px) {
+  .start-grid { grid-template-columns: 1fr 1.1fr 1fr; grid-template-areas: "decks local online"; }
+}
+
+.panel { background: var(--surface); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
+.panel-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
 .label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .player-row { display: flex; align-items: center; gap: 10px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 .player-row input {
-  flex: 1; min-width: 0; font: inherit; font-size: 18px; font-weight: 700; color: var(--ink);
-  background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 10px 12px;
+  flex: 1; min-width: 0; font: inherit; font-size: 17px; font-weight: 700; color: var(--ink);
+  background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 9px 12px;
 }
 .player-row input:focus { border-color: var(--line); outline: none; }
 .player-row input:disabled { opacity: .8; }
 .switch { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 4px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-.switch .track { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
+.switch .track { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; flex: none; }
 .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .switch[aria-pressed="true"] { color: var(--blue); }
 .switch[aria-pressed="true"] .track { background: var(--blue); }
 .switch[aria-pressed="true"] .track::after { transform: translateX(18px); }
-.levels { display: flex; gap: 8px; }
+.levels { display: flex; gap: 6px; }
 .levels[hidden] { display: none !important; }
 .levels button {
   flex: 1; border: 2px solid var(--line); background: transparent; border-radius: 12px;
-  padding: 9px 4px; font-weight: 800; color: var(--muted); transition: all .15s;
+  padding: 7px 4px; font-weight: 800; font-size: 14px; color: var(--muted); transition: all .15s; min-width: 0;
 }
 .levels button[aria-pressed="true"] { color: #fff; border-color: transparent; }
 .levels button[data-level="easy"][aria-pressed="true"] { background: var(--good); }
@@ -86,24 +117,36 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .levels button[data-level="hard"][aria-pressed="true"] { background: #e0413a; }
 .decks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .deck {
-  border: 2px solid var(--line); background: transparent; border-radius: 14px; padding: 10px 4px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .15s, border-color .15s;
+  border: 2px solid var(--line); background: transparent; border-radius: 14px; padding: 8px 4px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .15s, border-color .15s; min-width: 0;
 }
-.deck svg { width: 34px; height: 34px; transition: transform .2s; }
+.deck svg { width: 30px; height: 30px; transition: transform .2s; }
 .deck .heart-fill { fill: transparent; transition: fill .2s; }
 .deck[aria-pressed="true"] { border-color: var(--c); }
 .deck[aria-pressed="true"] .heart-fill { fill: var(--c); }
 .deck[aria-pressed="true"] svg { transform: scale(1.18); }
 .deck small { font-size: 11px; color: var(--muted); font-weight: 700; line-height: 1.2; text-align: center; }
-.counts { display: flex; justify-content: space-between; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.counts { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .counts b { color: var(--ink); }
+.deck-hint { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .primary {
-  border: 0; border-radius: 16px; padding: 16px; font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  border: 0; border-radius: 16px; padding: 14px; font-family: var(--font-display); font-weight: 700; font-size: 19px;
   background: var(--good); color: #fff; box-shadow: var(--shadow); transition: transform .1s, opacity .2s;
 }
+.primary.blue { background: var(--blue); }
 .primary:active { transform: scale(.98); }
 .primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-.hint { text-align: center; color: var(--muted); font-size: 14px; margin: -8px 0 0; }
+.hint { text-align: center; color: var(--muted); font-size: 13px; margin: 0; }
+@media (max-width: 459px) {
+  .chip { padding: 6px 8px; }
+  .chip .chip-text { display: none; }
+}
+@media (max-width: 639px) {
+  #start { gap: 10px; padding-block: 10px; }
+  .panel { padding: 12px; gap: 8px; border-radius: 16px; }
+  .tagline { font-size: 13px; }
+  .primary { padding: 12px; font-size: 18px; }
+}
 
 /* ---------- Game screen ---------- */
 #game { gap: 10px; }
@@ -193,8 +236,6 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .final ul { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .final li { font-size: 13px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 3px 10px; }
 .final li.none { background: none; color: var(--muted); font-weight: 700; }
-.sound-row { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.sound-row .switch { padding-left: 0; }
 .voice-note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .voice-note a { color: var(--blue); font-weight: 700; }
 .final .winner { box-shadow: 0 0 0 3px currentColor, var(--shadow); }
@@ -210,6 +251,7 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
   border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; font-variant-numeric: tabular-nums;
 }
 .join-row input:focus { border-color: var(--line); outline: none; }
+.join-row input::placeholder { letter-spacing: normal; font-family: var(--font-body); font-weight: 700; }
 .join-row button { flex: 1; }
 .online-btns { display: flex; flex-direction: column; gap: 10px; }
 .secondary:disabled { opacity: .45; cursor: not-allowed; }
@@ -243,61 +285,63 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
 
 <!-- START -->
 <section class="screen" id="start">
-  <div class="brand">
-    <div class="brand-cards" aria-hidden="true"><span></span><span>Ї</span></div>
-    <h1>Гра в Літери</h1>
-  </div>
+  <header class="start-head">
+    <div class="brand">
+      <div class="brand-cards" aria-hidden="true"><span></span><span>Ї</span></div>
+      <h1>Гра в Літери</h1>
+    </div>
+    <div class="head-tools" role="group" aria-label="Звук">
+      <button class="chip" id="voiceToggle" aria-pressed="true" type="button" title="Озвучувати літери й слова" aria-label="Голос: озвучувати літери й слова"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4 4v-4h0.5A2.5 2.5 0 0 1 5 13.5z"/><path fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" d="M9 9.5h6M9 12.5h4"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4 4v-4h0.5A2.5 2.5 0 0 1 5 13.5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 3l17 17"/></svg><span class="chip-text">Голос</span></button>
+      <button class="chip" id="soundToggle" aria-pressed="true" type="button" title="Звуки гри" aria-label="Звуки гри"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9l5 6M21 9l-5 6"/></svg><span class="chip-text">Звуки</span></button>
+    </div>
+  </header>
   <p class="tagline">Відкривай картки й збирай літери загаданого слова. Вгадав літеру — ходиш ще раз. Хто зібрав слово, забирає його собі.</p>
+  <p class="voice-note" id="voiceNote" hidden>У цьому браузері немає українського голосу, тому літери й слова не озвучуватимуться. Звуки гри працюють.</p>
 
-  <div class="panel">
-    <span class="label">Гравці</span>
-    <div class="player-row">
-      <span class="dot" style="background: var(--p1)"></span>
-      <input id="name1" maxlength="16" placeholder="Гравець 1" autocomplete="off">
+  <div class="start-grid">
+    <div class="panel area-decks">
+      <span class="label">Колоди карток</span>
+      <div class="decks" id="decks"></div>
+      <div class="counts"><span>Літер у грі: <b id="cntLetters">0</b></span><span>Слів у грі: <b id="cntWords">0</b></span></div>
+      <p class="deck-hint">Можна вибрати кілька колод. Колоди потрібні для обох видів гри.</p>
     </div>
-    <div class="player-row">
-      <span class="dot" style="background: var(--p2)"></span>
-      <input id="name2" maxlength="16" placeholder="Гравець 2" autocomplete="off">
-      <button class="switch" id="cpuToggle" aria-pressed="false" type="button">
-        <span class="track"></span> Комп'ютер
-      </button>
-    </div>
-    <div class="levels" id="levels" hidden>
-      <button type="button" data-level="easy" aria-pressed="false">Легко</button>
-      <button type="button" data-level="normal" aria-pressed="true">Нормально</button>
-      <button type="button" data-level="hard" aria-pressed="false">Складно</button>
-    </div>
-  </div>
 
-  <div class="panel">
-    <span class="label">Колоди карток</span>
-    <div class="decks" id="decks"></div>
-    <div class="counts"><span>Літер у грі: <b id="cntLetters">0</b></span><span>Слів у грі: <b id="cntWords">0</b></span></div>
-  </div>
-
-  <div class="panel">
-    <span class="label">Звук</span>
-    <div class="sound-row">
-      <button class="switch" id="voiceToggle" aria-pressed="true" type="button"><span class="track"></span> Озвучувати літери й слова</button>
-      <button class="switch" id="soundToggle" aria-pressed="true" type="button"><span class="track"></span> Звуки гри</button>
-    </div>
-    <p class="voice-note" id="voiceNote" hidden>У цьому браузері немає українського голосу, тому літери й слова не озвучуватимуться. Звуки гри працюють.</p>
-  </div>
-
-  <button class="primary" id="newGame" disabled>Нова гра</button>
-  <p class="hint" id="startHint">Обери хоча б одну колоду</p>
-
-  <div class="panel" id="onlinePanel">
-    <span class="label">Гра через інтернет</span>
-    <p class="voice-note">Кожен грає на своєму телефоні чи комп'ютері. Один створює кімнату з вибраними колодами, другий вводить її код.</p>
-    <div class="online-btns">
-      <button class="secondary" id="hostBtn" type="button">Створити кімнату</button>
-      <div class="join-row">
-        <input id="joinCode" inputmode="numeric" maxlength="4" placeholder="Код" autocomplete="off" aria-label="Код кімнати">
-        <button class="secondary" id="joinBtn" type="button">Приєднатися</button>
+    <div class="panel area-local">
+      <span class="label">Гра на одному пристрої</span>
+      <div class="player-row">
+        <span class="dot" style="background: var(--p1)"></span>
+        <input id="name1" maxlength="16" placeholder="Гравець 1" autocomplete="off" aria-label="Ім'я першого гравця">
+      </div>
+      <div class="player-row">
+        <span class="dot" style="background: var(--p2)"></span>
+        <input id="name2" maxlength="16" placeholder="Гравець 2" autocomplete="off" aria-label="Ім'я другого гравця">
+        <button class="switch" id="cpuToggle" aria-pressed="false" type="button">
+          <span class="track"></span> Комп'ютер
+        </button>
+      </div>
+      <div class="levels" id="levels" hidden>
+        <button type="button" data-level="easy" aria-pressed="false">Легко</button>
+        <button type="button" data-level="normal" aria-pressed="true">Нормально</button>
+        <button type="button" data-level="hard" aria-pressed="false">Складно</button>
+      </div>
+      <div class="panel-foot">
+        <button class="primary" id="newGame" disabled>Нова гра</button>
+        <p class="hint" id="startHint">Обери хоча б одну колоду</p>
       </div>
     </div>
-    <p class="voice-note" id="onlineNote" hidden></p>
+
+    <div class="panel area-online" id="onlinePanel">
+      <span class="label">Гра через інтернет</span>
+      <p class="voice-note">Кожен грає на своєму телефоні чи комп'ютері. Твоє ім'я береться з поля «Гравець 1».</p>
+      <div class="panel-foot online-btns">
+        <button class="primary blue" id="hostBtn" type="button">Створити кімнату</button>
+        <div class="join-row">
+          <input id="joinCode" inputmode="numeric" maxlength="4" placeholder="Код" autocomplete="off" aria-label="Код кімнати">
+          <button class="secondary" id="joinBtn" type="button">Приєднатися</button>
+        </div>
+        <p class="voice-note" id="onlineNote" hidden></p>
+      </div>
+    </div>
   </div>
 </section>
 
