@@ -46,39 +46,70 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outl
 .screen { height: 100%; display: flex; flex-direction: column; padding: 16px; padding-block: 12px; box-sizing: border-box; max-width: 1100px; margin: 0 auto; }
 .screen[hidden] { display: none !important; }
 
-/* ---------- Start screen ---------- */
-#start { overflow-y: auto; gap: 18px; align-items: stretch; max-width: 560px; }
-.brand { display: flex; align-items: center; gap: 12px; padding-top: 8px; }
-.brand-cards { display: flex; }
+/* ---------- Start screen ----------
+   Phone: one column (decks, this device, online). Tablet: decks on top, two below.
+   Laptop: three columns side by side, so the whole menu fits without scrolling. */
+#start { overflow-y: auto; gap: 12px; max-width: 1120px; padding-block: 14px; }
+.start-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-cards { display: flex; flex: none; }
 .brand-cards span {
-  width: 34px; height: 45px; border-radius: 7px; display: grid; place-items: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 20px; box-shadow: var(--shadow);
+  width: 30px; height: 40px; border-radius: 7px; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 18px; box-shadow: var(--shadow);
 }
 .brand-cards span:nth-child(1) { background: linear-gradient(45deg, var(--yellow), var(--blue)); transform: rotate(-8deg); }
 .brand-cards span:nth-child(2) { background: var(--card-face); color: #1f5fd6; margin-left: -8px; transform: rotate(6deg); }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 6vw, 34px); margin: 0; letter-spacing: -.01em; }
-.tagline { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
-.panel { background: var(--surface); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(22px, 5vw, 30px); margin: 0; letter-spacing: -.01em; }
+.tagline { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; max-width: 70ch; }
+.head-tools { display: flex; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 2px solid var(--line); background: var(--surface);
+  border-radius: 999px; padding: 5px 12px 5px 8px; font-weight: 800; font-size: 14px; color: var(--muted);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.chip svg { width: 18px; height: 18px; flex: none; }
+.chip .off { display: none; }
+.chip[aria-pressed="true"] { color: var(--blue); border-color: var(--blue); }
+.chip[aria-pressed="false"] .on { display: none; }
+.chip[aria-pressed="false"] .off { display: block; }
+
+.start-grid {
+  display: grid; gap: 12px; align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "decks" "local" "online";
+}
+.area-decks { grid-area: decks; }
+.area-local { grid-area: local; }
+.area-online { grid-area: online; }
+@media (min-width: 640px) {
+  .start-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "decks decks" "local online"; }
+}
+@media (min-width: 980px) {
+  .start-grid { grid-template-columns: 1fr 1.1fr 1fr; grid-template-areas: "decks local online"; }
+}
+
+.panel { background: var(--surface); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
+.panel-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
 .label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .player-row { display: flex; align-items: center; gap: 10px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 .player-row input {
-  flex: 1; min-width: 0; font: inherit; font-size: 18px; font-weight: 700; color: var(--ink);
-  background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 10px 12px;
+  flex: 1; min-width: 0; font: inherit; font-size: 17px; font-weight: 700; color: var(--ink);
+  background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 9px 12px;
 }
 .player-row input:focus { border-color: var(--line); outline: none; }
 .player-row input:disabled { opacity: .8; }
 .switch { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 4px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-.switch .track { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
+.switch .track { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; flex: none; }
 .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .switch[aria-pressed="true"] { color: var(--blue); }
 .switch[aria-pressed="true"] .track { background: var(--blue); }
 .switch[aria-pressed="true"] .track::after { transform: translateX(18px); }
-.levels { display: flex; gap: 8px; }
+.levels { display: flex; gap: 6px; }
 .levels[hidden] { display: none !important; }
 .levels button {
   flex: 1; border: 2px solid var(--line); background: transparent; border-radius: 12px;
-  padding: 9px 4px; font-weight: 800; color: var(--muted); transition: all .15s;
+  padding: 7px 4px; font-weight: 800; font-size: 14px; color: var(--muted); transition: all .15s; min-width: 0;
 }
 .levels button[aria-pressed="true"] { color: #fff; border-color: transparent; }
 .levels button[data-level="easy"][aria-pressed="true"] { background: var(--good); }
@@ -86,24 +117,36 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .levels button[data-level="hard"][aria-pressed="true"] { background: #e0413a; }
 .decks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .deck {
-  border: 2px solid var(--line); background: transparent; border-radius: 14px; padding: 10px 4px 8px;
-  display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .15s, border-color .15s;
+  border: 2px solid var(--line); background: transparent; border-radius: 14px; padding: 8px 4px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .15s, border-color .15s; min-width: 0;
 }
-.deck svg { width: 34px; height: 34px; transition: transform .2s; }
+.deck svg { width: 30px; height: 30px; transition: transform .2s; }
 .deck .heart-fill { fill: transparent; transition: fill .2s; }
 .deck[aria-pressed="true"] { border-color: var(--c); }
 .deck[aria-pressed="true"] .heart-fill { fill: var(--c); }
 .deck[aria-pressed="true"] svg { transform: scale(1.18); }
 .deck small { font-size: 11px; color: var(--muted); font-weight: 700; line-height: 1.2; text-align: center; }
-.counts { display: flex; justify-content: space-between; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.counts { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .counts b { color: var(--ink); }
+.deck-hint { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
 .primary {
-  border: 0; border-radius: 16px; padding: 16px; font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  border: 0; border-radius: 16px; padding: 14px; font-family: var(--font-display); font-weight: 700; font-size: 19px;
   background: var(--good); color: #fff; box-shadow: var(--shadow); transition: transform .1s, opacity .2s;
 }
+.primary.blue { background: var(--blue); }
 .primary:active { transform: scale(.98); }
 .primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-.hint { text-align: center; color: var(--muted); font-size: 14px; margin: -8px 0 0; }
+.hint { text-align: center; color: var(--muted); font-size: 13px; margin: 0; }
+@media (max-width: 459px) {
+  .chip { padding: 6px 8px; }
+  .chip .chip-text { display: none; }
+}
+@media (max-width: 639px) {
+  #start { gap: 10px; padding-block: 10px; }
+  .panel { padding: 12px; gap: 8px; border-radius: 16px; }
+  .tagline { font-size: 13px; }
+  .primary { padding: 12px; font-size: 18px; }
+}
 
 /* ---------- Game screen ---------- */
 #game { gap: 10px; }
@@ -133,6 +176,20 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 }
 .word span.found { color: var(--good); border-color: var(--good); animation: pop .45s ease; }
 .word span.apos { border-color: transparent; min-width: 0; }
+.word { align-items: center; }
+.word .pic {
+  font-size: clamp(30px, 7.5vw, 46px); line-height: 1; border: 0; background: none; padding: 0 6px 0 0;
+  cursor: pointer; font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+.word .pic.cheer { animation: cheer .9s ease; }
+@keyframes cheer { 20% { transform: scale(1.5) rotate(-12deg); } 45% { transform: scale(1.4) rotate(10deg); } 70% { transform: scale(1.2) rotate(-4deg); } }
+.tools { display: flex; gap: 6px; }
+.icon-btn {
+  border: 0; background: var(--surface); border-radius: 10px; width: 32px; height: 26px; display: grid; place-items: center;
+  color: var(--muted); box-shadow: var(--shadow); padding: 0;
+}
+.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn[aria-pressed="true"] { color: #e0413a; }
 
 .table { flex: 1; min-height: 0; display: grid; place-items: center; }
 .grid { display: grid; gap: 8px; justify-content: center; align-content: center; }
@@ -179,10 +236,43 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 
 .final ul { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .final li { font-size: 13px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 3px 10px; }
 .final li.none { background: none; color: var(--muted); font-weight: 700; }
+.voice-note { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.voice-note a { color: var(--blue); font-weight: 700; }
 .final .winner { box-shadow: 0 0 0 3px currentColor, var(--shadow); }
 .row-btns { display: flex; gap: 10px; }
 .row-btns button { flex: 1; }
 .secondary { border: 2px solid var(--line); background: var(--surface); border-radius: 16px; padding: 14px; font-weight: 800; font-size: 17px; }
+
+/* ---------- Online ---------- */
+.join-row { display: flex; gap: 8px; }
+.join-row input {
+  width: 7.5em; min-width: 0; font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  letter-spacing: .2em; text-align: center; color: var(--ink); background: var(--bg);
+  border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; font-variant-numeric: tabular-nums;
+}
+.join-row input:focus { border-color: var(--line); outline: none; }
+.join-row input::placeholder { letter-spacing: normal; font-family: var(--font-body); font-weight: 700; }
+.join-row button { flex: 1; }
+.online-btns { display: flex; flex-direction: column; gap: 10px; }
+.secondary:disabled { opacity: .45; cursor: not-allowed; }
+#lobby { justify-content: center; max-width: 480px; }
+.lobby-card { align-items: center; text-align: center; gap: 14px; padding: 24px 18px; }
+.room-code {
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(44px, 14vw, 64px); letter-spacing: .12em;
+  font-variant-numeric: tabular-nums; color: var(--blue); line-height: 1;
+}
+.lobby-text { margin: 0; font-size: 16px; line-height: 1.45; text-wrap: balance; }
+.lobby-text.error { color: #c4322b; font-weight: 700; }
+.share { display: flex; gap: 8px; width: 100%; }
+.share input {
+  flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--muted); background: var(--bg);
+  border: 0; border-radius: 10px; padding: 10px;
+}
+.share button { padding: 10px 14px; font-size: 15px; }
+.lobby-card .primary, .lobby-card > .secondary { width: 100%; box-sizing: border-box; }
+.dots::after { content: ""; animation: dots 1.4s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+.again-note { margin: 0; color: var(--muted); font-weight: 700; }
 
 canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 @media (prefers-reduced-motion: reduce) {
@@ -195,40 +285,79 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
 
 <!-- START -->
 <section class="screen" id="start">
-  <div class="brand">
-    <div class="brand-cards" aria-hidden="true"><span></span><span>Ї</span></div>
-    <h1>Гра в Літери</h1>
-  </div>
+  <header class="start-head">
+    <div class="brand">
+      <div class="brand-cards" aria-hidden="true"><span></span><span>Ї</span></div>
+      <h1>Гра в Літери</h1>
+    </div>
+    <div class="head-tools" role="group" aria-label="Звук">
+      <button class="chip" id="voiceToggle" aria-pressed="true" type="button" title="Озвучувати літери й слова" aria-label="Голос: озвучувати літери й слова"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4 4v-4h0.5A2.5 2.5 0 0 1 5 13.5z"/><path fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" d="M9 9.5h6M9 12.5h4"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4 4v-4h0.5A2.5 2.5 0 0 1 5 13.5z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 3l17 17"/></svg><span class="chip-text">Голос</span></button>
+      <button class="chip" id="soundToggle" aria-pressed="true" type="button" title="Звуки гри" aria-label="Звуки гри"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9l5 6M21 9l-5 6"/></svg><span class="chip-text">Звуки</span></button>
+    </div>
+  </header>
   <p class="tagline">Відкривай картки й збирай літери загаданого слова. Вгадав літеру — ходиш ще раз. Хто зібрав слово, забирає його собі.</p>
+  <p class="voice-note" id="voiceNote" hidden>У цьому браузері немає українського голосу, тому літери й слова не озвучуватимуться. Звуки гри працюють.</p>
 
-  <div class="panel">
-    <span class="label">Гравці</span>
-    <div class="player-row">
-      <span class="dot" style="background: var(--p1)"></span>
-      <input id="name1" maxlength="16" placeholder="Гравець 1" autocomplete="off">
+  <div class="start-grid">
+    <div class="panel area-decks">
+      <span class="label">Колоди карток</span>
+      <div class="decks" id="decks"></div>
+      <div class="counts"><span>Літер у грі: <b id="cntLetters">0</b></span><span>Слів у грі: <b id="cntWords">0</b></span></div>
+      <p class="deck-hint">Можна вибрати кілька колод. Колоди потрібні для обох видів гри.</p>
     </div>
-    <div class="player-row">
-      <span class="dot" style="background: var(--p2)"></span>
-      <input id="name2" maxlength="16" placeholder="Гравець 2" autocomplete="off">
-      <button class="switch" id="cpuToggle" aria-pressed="false" type="button">
-        <span class="track"></span> Комп'ютер
-      </button>
+
+    <div class="panel area-local">
+      <span class="label">Гра на одному пристрої</span>
+      <div class="player-row">
+        <span class="dot" style="background: var(--p1)"></span>
+        <input id="name1" maxlength="16" placeholder="Гравець 1" autocomplete="off" aria-label="Ім'я першого гравця">
+      </div>
+      <div class="player-row">
+        <span class="dot" style="background: var(--p2)"></span>
+        <input id="name2" maxlength="16" placeholder="Гравець 2" autocomplete="off" aria-label="Ім'я другого гравця">
+        <button class="switch" id="cpuToggle" aria-pressed="false" type="button">
+          <span class="track"></span> Комп'ютер
+        </button>
+      </div>
+      <div class="levels" id="levels" hidden>
+        <button type="button" data-level="easy" aria-pressed="false">Легко</button>
+        <button type="button" data-level="normal" aria-pressed="true">Нормально</button>
+        <button type="button" data-level="hard" aria-pressed="false">Складно</button>
+      </div>
+      <div class="panel-foot">
+        <button class="primary" id="newGame" disabled>Нова гра</button>
+        <p class="hint" id="startHint">Обери хоча б одну колоду</p>
+      </div>
     </div>
-    <div class="levels" id="levels" hidden>
-      <button type="button" data-level="easy" aria-pressed="false">Легко</button>
-      <button type="button" data-level="normal" aria-pressed="true">Нормально</button>
-      <button type="button" data-level="hard" aria-pressed="false">Складно</button>
+
+    <div class="panel area-online" id="onlinePanel">
+      <span class="label">Гра через інтернет</span>
+      <p class="voice-note">Кожен грає на своєму телефоні чи комп'ютері. Твоє ім'я береться з поля «Гравець 1».</p>
+      <div class="panel-foot online-btns">
+        <button class="primary blue" id="hostBtn" type="button">Створити кімнату</button>
+        <div class="join-row">
+          <input id="joinCode" inputmode="numeric" maxlength="4" placeholder="Код" autocomplete="off" aria-label="Код кімнати">
+          <button class="secondary" id="joinBtn" type="button">Приєднатися</button>
+        </div>
+        <p class="voice-note" id="onlineNote" hidden></p>
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="panel">
-    <span class="label">Колоди карток</span>
-    <div class="decks" id="decks"></div>
-    <div class="counts"><span>Літер у грі: <b id="cntLetters">0</b></span><span>Слів у грі: <b id="cntWords">0</b></span></div>
+<!-- LOBBY -->
+<section class="screen" id="lobby" hidden>
+  <div class="panel lobby-card">
+    <span class="label" id="lobbyLabel">Гра через інтернет</span>
+    <div class="room-code" id="roomCode" hidden></div>
+    <p class="lobby-text" id="lobbyText"></p>
+    <div class="share" id="shareBox" hidden>
+      <input id="shareLink" readonly aria-label="Посилання-запрошення">
+      <button class="secondary" id="copyLink" type="button">Копіювати</button>
+    </div>
+    <button class="primary" id="lobbyStart" type="button" hidden>Почати гру</button>
+    <button class="secondary" id="lobbyCancel" type="button">Скасувати</button>
   </div>
-
-  <button class="primary" id="newGame" disabled>Нова гра</button>
-  <p class="hint" id="startHint">Обери хоча б одну колоду</p>
 </section>
 
 <!-- GAME -->
@@ -236,7 +365,10 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   <div class="bar">
     <div class="side p1" id="side1"><span class="turn" id="turn1"></span><span class="name" id="g-name1"></span><span class="score" id="g-score1"></span></div>
     <div class="center">
-      <button class="menu-btn" id="toMenu" type="button">Меню</button>
+      <div class="tools">
+        <button class="menu-btn" id="toMenu" type="button">Меню</button>
+        <button class="icon-btn" id="muteBtn" type="button" aria-pressed="false" aria-label="Вимкнути звук" title="Вимкнути звук"></button>
+      </div>
       <span class="left-count" id="wordsLeft" title="Слів залишилось">0</span>
     </div>
     <div class="side p2 right" id="side2"><span class="turn" id="turn2"></span><span class="name" id="g-name2"></span><span class="score" id="g-score2"></span></div>
@@ -258,8 +390,10 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     <button class="secondary" id="toStart" type="button">Меню</button>
     <button class="primary" id="again" type="button">Грати ще</button>
   </div>
+  <p class="again-note" id="againNote" hidden></p>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
 <script>
 (() => {
   // ---------- Data (from ModelData.swift) ----------
@@ -277,8 +411,18 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       letters: ["А","Б","Г","Ґ","Д","Е","И","Ї","Ф","Ж","З","К","П","Р","У","Ч","Щ","Ь"],
       words: ["Курча","Грак","Гриф","Їжак","Жираф","Зебра","Ґедзь","Гепард","Чиж","Карп","Щука"] },
   ];
+  // A picture for every word, so children who can't read yet still know what to look for.
+  const EMOJI = {
+    "Поні": "🐴", "Алое": "🪴", "Лев": "🦁", "Ліс": "🌲", "Сіно": "🌾", "Оса": "🐝", "Слон": "🐘", "Сова": "🦉",
+    "Єнот": "🦝", "Індик": "🦃", "Конвалія": "💐", "Пітон": "🐍", "Миша": "🐭", "Півень": "🐓", "Тюлень": "🦭", "Пелікан": "🐦",
+    "Буйвол": "🐃", "Заєць": "🐇", "Козел": "🐐", "Сойка": "🐦", "Хомʼяк": "🐹", "Ему": "🐦",
+    "Курча": "🐥", "Грак": "🐦", "Гриф": "🦅", "Їжак": "🦔", "Жираф": "🦒", "Зебра": "🦓", "Ґедзь": "🪰", "Гепард": "🐆",
+    "Чиж": "🐤", "Карп": "🐟", "Щука": "🐟",
+  };
   const APOS = /[ʼ'’]/;
-  const TIME_PLAYER = 900, TIME_CPU_OPEN = 1500, TIME_CPU_THINK = 1000, TIME_NEXT_WORD = 1400;
+  const SPEED = Number(window.__LG_SPEED) || 1;   // tests run the game faster
+  const TIME_PLAYER = 900 * SPEED, TIME_CPU_OPEN = 1500 * SPEED, TIME_CPU_THINK = 1000 * SPEED, TIME_NEXT_WORD = 1400 * SPEED;
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
   const $ = (id) => document.getElementById(id);
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -297,8 +441,12 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     cpu: !!saved.cpu,
     level: saved.level || "normal",
     decks: new Set(saved.decks || []),
+    voice: saved.voice !== false,
+    sound: saved.sound !== false,
+    muted: !!saved.muted,
   };
   const save = () => store.set({ ...settings, decks: [...settings.decks] });
+  let onlineReady = false;   // set once the online section below has run
 
   // ---------- Start screen ----------
   const name1 = $("name1"), name2 = $("name2"), cpuToggle = $("cpuToggle"), levels = $("levels");
@@ -349,8 +497,105 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     $("cntWords").textContent = p.words.length;
     $("newGame").disabled = p.words.length === 0;
     $("startHint").hidden = p.words.length > 0;
+    if (onlineReady) renderOnline();
   }
   renderCpu(); renderDecks();
+
+  // ---------- Sound effects (synthesized, no files) ----------
+  const sfx = {
+    ctx: null,
+    unlock() {
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) { try { this.ctx = new AC(); } catch { this.ctx = null; } }
+      }
+      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+    },
+    tone(freq, at, dur, type = "sine", vol = 0.16) {
+      const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, at);
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(vol, at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      o.connect(g).connect(c.destination); o.start(at); o.stop(at + dur + 0.02);
+    },
+    play(name) {
+      if (settings.muted || !settings.sound) return;
+      this.unlock();
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime + 0.02;
+      try {
+        switch (name) {
+          case "flip": this.tone(880, t, 0.07, "triangle", 0.06); break;
+          case "hit": this.tone(784, t, 0.14); this.tone(1175, t + 0.1, 0.22); break;
+          case "miss": this.tone(247, t, 0.2, "triangle", 0.18); this.tone(185, t + 0.14, 0.3, "triangle", 0.16); break;
+          case "word": [523, 659, 784, 1047].forEach((f, k) => this.tone(f, t + k * 0.09, 0.3)); break;
+          case "win": [[523, 0], [523, .14], [523, .28], [698, .42], [880, .7], [1047, .95]]
+            .forEach(([f, d], k) => this.tone(f, t + d, k === 5 ? 0.8 : 0.22, "triangle", 0.18)); break;
+        }
+      } catch {}
+    },
+  };
+
+  // ---------- Voice (the browser's own Ukrainian speech synthesizer) ----------
+  const voice = {
+    v: null,
+    supported: "speechSynthesis" in window,
+    pick() {
+      if (!this.supported) return;
+      const all = speechSynthesis.getVoices();
+      this.v = all.find(v => /^uk/i.test(v.lang)) || null;
+      // Only say "no voice" once the browser has actually listed its voices.
+      $("voiceNote").hidden = !(settings.voice && (!this.supported || (all.length && !this.v)));
+    },
+    say(text, delay = 0) {
+      if (settings.muted || !settings.voice || !this.v) return;
+      const go = () => {
+        try {
+          speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.voice = this.v; u.lang = this.v.lang; u.rate = 0.85; u.pitch = 1.1;
+          speechSynthesis.speak(u);
+        } catch {}
+      };
+      delay ? later(go, delay) : go();
+    },
+    stop() { try { this.supported && speechSynthesis.cancel(); } catch {} },
+    // iOS lets a page speak only after speech was started inside a tap; call this from one.
+    prime() {
+      if (!this.supported || this.primed) return;
+      try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); this.primed = true; } catch {}
+    },
+  };
+  if (voice.supported) {
+    voice.pick();
+    try { speechSynthesis.addEventListener("voiceschanged", () => voice.pick()); } catch {}
+  } else {
+    $("voiceNote").hidden = !settings.voice;
+  }
+
+  const ICON_SOUND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+  const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9l5 6M21 9l-5 6"/></svg>';
+  function renderSound() {
+    $("voiceToggle").setAttribute("aria-pressed", settings.voice);
+    $("soundToggle").setAttribute("aria-pressed", settings.sound);
+    const m = $("muteBtn");
+    m.setAttribute("aria-pressed", settings.muted);
+    m.innerHTML = settings.muted ? ICON_MUTED : ICON_SOUND;
+    const label = settings.muted ? "Увімкнути звук" : "Вимкнути звук";
+    m.setAttribute("aria-label", label); m.title = label;
+    voice.pick();
+  }
+  $("voiceToggle").addEventListener("click", () => { settings.voice = !settings.voice; save(); renderSound(); });
+  $("soundToggle").addEventListener("click", () => {
+    settings.sound = !settings.sound; save(); renderSound();
+    if (settings.sound) sfx.play("hit");
+  });
+  $("muteBtn").addEventListener("click", () => {
+    settings.muted = !settings.muted; save(); renderSound();
+    if (settings.muted) voice.stop(); else sfx.play("flip");
+  });
+  renderSound();
 
   // ENGINE-START
   // ---------- Rules (same as GameData.swift) ----------
@@ -417,29 +662,51 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   // ENGINE-END
 
   // ---------- Game screen: timing and drawing; rules live in Engine ----------
+  // Three ways to play: "local" (one device, maybe vs computer), "host" and "guest" (online).
+  // Online, the host's device runs the game; the guest sends taps and mirrors the host's state.
   const game = new Engine();
   let cpu = null, vsCPU = false, busy = false, playing = false;
   const timers = new Set();
   const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
   const clearTimers = () => { timers.forEach(clearTimeout); timers.clear(); };
 
-  function show(id) { ["start", "game", "results"].forEach(s => $(s).hidden = s !== id); }
+  function show(id) { ["start", "lobby", "game", "results"].forEach(s => $(s).hidden = s !== id); }
 
   function startGame() {
+    if (net.mode === "guest") return;              // only the host starts online games
     clearTimers();
+    sfx.unlock();
+    voice.prime();
     const p = pool();
-    vsCPU = settings.cpu;
+    const online = net.mode === "host";
+    vsCPU = !online && settings.cpu;
     cpu = vsCPU ? new CPU(settings.level) : null;
-    game.start(shuffle([...p.letters]), shuffle([...p.words]),
-      [settings.name1 || "Гравець 1", vsCPU ? "Комп'ютер" : (settings.name2 || "Гравець 2")]);
+    const second = online ? net.guestName : (vsCPU ? "Комп'ютер" : (settings.name2 || "Гравець 2"));
+    game.start(shuffle([...p.letters]), shuffle([...p.words]), [settings.name1 || "Гравець 1", second]);
     busy = false; playing = true;
-    $("g-name1").textContent = game.players[0].name;
-    $("g-name2").textContent = game.players[1].name;
-    buildGrid(); renderBar(); renderWord();
-    show("game"); layout();
+    enterGame();
+    net.send("start");
   }
 
-  function stopGame() { clearTimers(); playing = false; busy = false; show("start"); }
+  function enterGame() {
+    $("g-name1").textContent = game.players[0].name;
+    $("g-name2").textContent = game.players[1].name;
+    $("again").hidden = net.mode === "guest";
+    $("againNote").hidden = net.mode !== "guest";
+    $("againNote").textContent = `Нову гру починає ${game.players[0].name}.`;
+    buildGrid(); renderBar(); renderWord();
+    show("game"); layout();
+    announceWord(300);
+  }
+
+  // Says which word to look for, e.g. "Шукаємо: Лев".
+  function announceWord(delay = 0) { voice.say(`Шукаємо: ${game.secret}`, delay); }
+
+  function stopGame() {
+    clearTimers(); voice.stop(); playing = false; busy = false;
+    net.leave();
+    show("start");
+  }
 
   function buildGrid() {
     const grid = $("grid");
@@ -448,7 +715,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       const b = document.createElement("button");
       b.type = "button"; b.className = "card"; b.dataset.i = i;
       b.setAttribute("aria-label", "Закрита картка");
-      b.innerHTML = `<span class="inner"><span class="back"></span><span class="face">${l}</span></span>`;
+      b.innerHTML = `<span class="inner"><span class="back"></span><span class="face">${esc(l)}</span></span>`;
       grid.appendChild(b);
     });
   }
@@ -474,13 +741,21 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   addEventListener("resize", layout);
 
   const isCPUTurn = () => vsCPU && game.turn === 1;
-  const isLocked = () => busy || isCPUTurn();
+  const myIndex = () => net.mode === "guest" ? 1 : 0;
+  const isRemoteTurn = () => net.mode !== "local" && game.turn !== myIndex();
+  const isLocked = () => busy || isCPUTurn() || isRemoteTurn();
 
   function renderBar() {
     [0, 1].forEach(p => {
       const active = game.turn === p && !game.over;
+      let label = "";
+      if (active) {
+        if (vsCPU && p === 1) label = "думає…";
+        else if (net.mode !== "local" && p !== myIndex()) label = "ходить…";
+        else label = "твій хід";
+      }
       $("side" + (p + 1)).classList.toggle("active", active);
-      $("turn" + (p + 1)).textContent = active ? (vsCPU && p === 1 ? "думає…" : "твій хід") : "";
+      $("turn" + (p + 1)).textContent = label;
       $("g-score" + (p + 1)).textContent = `Карток: ${game.players[p].words.length}`;
     });
     $("wordsLeft").textContent = game.remaining.length;
@@ -490,6 +765,12 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
   function renderWord() {
     const el = $("word");
     el.innerHTML = "";
+    const pic = document.createElement("button");
+    pic.type = "button"; pic.className = "pic"; pic.id = "pic";
+    pic.textContent = EMOJI[game.secret] || "⭐";
+    pic.setAttribute("aria-label", `Сказати слово ${game.secret}`);
+    pic.addEventListener("click", () => { sfx.unlock(); voice.say(game.secret); });
+    el.appendChild(pic);
     [...game.secret].forEach(ch => {
       const s = document.createElement("span");
       s.textContent = ch;
@@ -514,55 +795,90 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     const c = e.target.closest(".card");
     if (!c || !playing || isLocked()) return;
     const i = +c.dataset.i;
-    if (!game.openCard(i)) return;   // open cards ignore taps
-    busy = true; syncCards(); renderBar();
-    later(() => resolve(i), TIME_PLAYER);
+    if (game.open.has(i)) return;                  // open cards ignore taps
+    if (net.mode === "guest") {                    // the host decides; its answer unlocks us
+      busy = true; renderBar();
+      net.toHost({ t: "open", i });
+      return;
+    }
+    openCard(i, TIME_PLAYER);
   });
+
+  // ----- Moves (local and host). Each step updates the screen, then tells the guest. -----
+
+  function openCard(i, delay) {
+    if (!game.openCard(i)) return false;
+    busy = true;
+    showFlip(i);
+    net.send("flip", { i });
+    later(() => resolve(i), delay);
+    return true;
+  }
 
   function resolve(i) {
     if (cpu) cpu.remember(game.letters[i], i);
     const result = game.resolve(i);
-
-    if (result === "miss") {
-      cardEl(i).classList.add("miss");
-      later(syncCards, 350);           // show the red frame, then flip back
-    } else {
-      cardEl(i).classList.add("hit");
-      renderWord();
-    }
-
-    if (result === "wordCompleted") {
-      renderBar();
-      const sc = $("g-score" + (game.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
-      sparkle(game.needed.size + 1);
-      later(nextWord, TIME_NEXT_WORD);
-      return;
-    }
-    busy = false;
-    renderBar();
+    if (result !== "wordCompleted") busy = false;
+    showResult(i, result);
+    net.send("result", { i, result });
+    if (result === "wordCompleted") { later(nextWord, TIME_NEXT_WORD + 600); return; }
     if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK);
   }
 
   function nextWord() {
     game.nextWord();
-    syncCards();
     busy = false;
-    if (game.over) return finish();
-    if (cpu) cpu.newWordStarted();
-    renderWord(); renderBar();
-    if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK + 500);
+    if (cpu && !game.over) cpu.newWordStarted();
+    net.send("next");
+    if (game.over) { syncCards(); finish(); return; }
+    showNext();
+    if (isCPUTurn()) later(cpuMove, TIME_CPU_THINK + 900);
   }
 
   function cpuMove() {
     if (!playing) return;
     const i = cpu.choose(game);
-    if (i === null || !game.openCard(i)) return;
-    busy = true; syncCards(); renderBar();
-    later(() => resolve(i), TIME_CPU_OPEN);
+    if (i !== null) openCard(i, TIME_CPU_OPEN);
   }
 
   function finish() {
     playing = false;
+    net.send("over");
+    showResults();
+  }
+
+  // ----- What every step looks and sounds like (both devices) -----
+
+  function showFlip(i) {
+    syncCards(); renderBar();
+    sfx.play("flip");
+    voice.say(lower(game.letters[i]));
+  }
+
+  function showResult(i, result) {
+    const c = cardEl(i);
+    if (result === "miss") {
+      sfx.play("miss");
+      if (c) c.classList.add("miss");
+      later(syncCards, 350);           // show the red frame, then flip back
+    } else if (result === "hit" || result === "wordCompleted") {
+      if (c) c.classList.add("hit");
+      renderWord();
+      if (result === "hit") sfx.play("hit");
+    }
+    renderBar();
+    if (result === "wordCompleted") {
+      const sc = $("g-score" + (game.turn + 1)); sc.classList.remove("pop"); void sc.offsetWidth; sc.classList.add("pop");
+      sparkle(game.needed.size + 1);
+      sfx.play("word");
+      voice.say(`${game.secret}!`, 350);
+      const pic = $("pic"); if (pic) pic.classList.add("cheer");
+    }
+  }
+
+  function showNext() { syncCards(); renderWord(); renderBar(); announceWord(); }
+
+  function showResults() {
     const w = game.winner, color = ["var(--p1)", "var(--p2)"];
     const title = $("resTitle");
     title.textContent = w === null ? "Нічия!" : `${game.players[w].name} перемагає!`;
@@ -575,21 +891,275 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       $("r-name" + (p + 1)).textContent = pl.name;
       $("r-score" + (p + 1)).textContent = `Карток: ${pl.words.length}`;
       $("r-words" + (p + 1)).innerHTML = pl.words.length
-        ? pl.words.map(x => `<li>${x}</li>`).join("")
+        ? pl.words.map(x => `<li>${EMOJI[x] || ""} ${esc(x)}</li>`).join("")
         : `<li class="none">Жодного слова</li>`;
       $("res" + (p + 1)).classList.toggle("winner", w === p);
     });
     show("results");
     sparkle(w === null ? 6 : 12);
+    sfx.play("win");
+    voice.say(title.textContent, 1300);
   }
 
   const ICON_TROPHY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1zM6 20h12v2H6z"/></svg>';
   const ICON_DRAW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.3 6.2 19.8l1.6-6.6L2.6 8.8l6.8-.5z"/></svg>';
 
-  $("newGame").addEventListener("click", startGame);
+  $("newGame").addEventListener("click", () => { net.leave(); startGame(); });
   $("again").addEventListener("click", startGame);
   $("toStart").addEventListener("click", stopGame);
   $("toMenu").addEventListener("click", stopGame);
+
+  // ---------- Online play ----------
+  // The transport only moves messages between two devices. It's WebRTC (PeerJS) for now;
+  // another transport (e.g. Firebase) can replace it without touching the game.
+  const PEER_PREFIX = "lettersgame-uk-room-";
+  const PAGES_URL = "https://creettresh.github.io/LettersGame/";
+  const peerTransport = {
+    available() {
+      // Claude's page viewer blocks WebRTC, so online play needs the GitHub Pages copy.
+      if (/claude|anthropic/i.test(location.hostname)) return false;
+      return typeof window.Peer === "function" && typeof window.RTCPeerConnection !== "undefined";
+    },
+    // Opens a room. Calls back: onReady(), onGuest(link), onError(kind)
+    host(code, on) {
+      const peer = new window.Peer(PEER_PREFIX + code, { debug: 0 });
+      const link = { peer, conn: null };
+      peer.on("open", () => on.ready());
+      peer.on("connection", (conn) => {
+        if (link.conn) { conn.on("open", () => { try { conn.send({ t: "full" }); conn.close(); } catch {} }); return; }
+        link.conn = conn;
+        conn.on("open", () => on.guest());
+        conn.on("data", (d) => on.data(d));
+        conn.on("close", () => on.closed());
+        conn.on("error", () => on.closed());
+      });
+      peer.on("error", (e) => on.error(e && e.type === "unavailable-id" ? "taken" : "network"));
+      return link;
+    },
+    join(code, on) {
+      const peer = new window.Peer({ debug: 0 });
+      const link = { peer, conn: null };
+      peer.on("open", () => {
+        const conn = peer.connect(PEER_PREFIX + code, { reliable: true, serialization: "json" });
+        link.conn = conn;
+        conn.on("open", () => on.connected());
+        conn.on("data", (d) => on.data(d));
+        conn.on("close", () => on.closed());
+        conn.on("error", () => on.closed());
+      });
+      peer.on("error", (e) => on.error(e && e.type === "peer-unavailable" ? "no-room" : "network"));
+      return link;
+    },
+    send(link, msg) { try { if (link && link.conn && link.conn.open) link.conn.send(msg); } catch {} },
+    close(link) {
+      if (!link) return;
+      try { link.conn && link.conn.close(); } catch {}
+      try { link.peer && link.peer.destroy(); } catch {}
+    },
+  };
+
+  const net = {
+    mode: "local",            // "local" | "host" | "guest"
+    transport: peerTransport,
+    link: null,
+    code: "",
+    guestName: "Гравець 2",
+    connectTimer: null,
+    session: 0,               // bumps on every room; events from an older room are ignored
+
+    // Host -> guest: what just happened plus the full state after it.
+    send(type, extra = {}) {
+      if (this.mode !== "host") return;
+      this.transport.send(this.link, { t: type, s: snapshot(), ...extra });
+    },
+    toHost(msg) { if (this.mode === "guest") this.transport.send(this.link, msg); },
+    leave() {
+      if (this.mode === "local") return;
+      this.transport.send(this.link, { t: "bye" });
+      const link = this.link;
+      this.mode = "local"; this.link = null; this.session++;
+      clearTimeout(this.connectTimer);
+      setTimeout(() => this.transport.close(link), 200);   // let "bye" go out first
+    },
+  };
+
+  function snapshot() {
+    return {
+      letters: game.letters, remaining: game.remaining, players: game.players, turn: game.turn,
+      open: [...game.open], found: [...game.found], secret: game.secret, over: game.over, busy,
+    };
+  }
+  // The guest trusts only the shape of what arrives; text is shown with textContent or escaped.
+  function applySnapshot(s) {
+    if (!s || !Array.isArray(s.letters) || !Array.isArray(s.players) || s.players.length !== 2) return false;
+    game.letters = s.letters.map(String);
+    game.remaining = (s.remaining || []).map(String);
+    game.players = s.players.map(p => ({ name: String(p && p.name || "").slice(0, 16) || "Гравець",
+                                         words: Array.isArray(p && p.words) ? p.words.map(String) : [] }));
+    game.turn = s.turn === 1 ? 1 : 0;
+    game.open = new Set((s.open || []).map(Number));
+    game.found = new Set((s.found || []).map(String));
+    game.secret = String(s.secret || "");
+    game.over = !!s.over;
+    busy = !!s.busy;
+    return true;
+  }
+
+  function onlineSupported() { return net.transport.available(); }
+
+  // Wraps transport callbacks so a closing old connection can't disturb the current one.
+  function forSession(handlers) {
+    const id = ++net.session;
+    const out = {};
+    for (const [k, fn] of Object.entries(handlers)) out[k] = (...a) => { if (net.session === id) fn(...a); };
+    return out;
+  }
+
+  function renderOnline() {
+    const hasWords = pool().words.length > 0;
+    const ok = onlineSupported();
+    $("hostBtn").disabled = !ok || !hasWords;
+    $("joinBtn").disabled = !ok;
+    $("joinCode").disabled = !ok;
+    const note = $("onlineNote");
+    if (!ok) {
+      note.hidden = false;
+      note.innerHTML = 'Онлайн-гра тут недоступна. Відкрий гру за адресою <a href="' + PAGES_URL + '" target="_blank" rel="noopener">creettresh.github.io/LettersGame</a>.';
+    } else if (!hasWords) {
+      note.hidden = false;
+      note.textContent = "Щоб створити кімнату, спершу обери колоди вище.";
+    } else note.hidden = true;
+  }
+
+  function lobby({ label = "Гра через інтернет", code = "", text = "", error = false, link = "", canStart = false, cancel = "Скасувати", waiting = false }) {
+    $("lobbyLabel").textContent = label;
+    $("roomCode").hidden = !code; $("roomCode").textContent = code;
+    const t = $("lobbyText");
+    t.textContent = text; t.classList.toggle("error", error); t.classList.toggle("dots", waiting);
+    $("shareBox").hidden = !link; $("shareLink").value = link;
+    $("lobbyStart").hidden = !canStart;
+    $("lobbyCancel").textContent = cancel;
+    show("lobby");
+  }
+
+  function hostRoom(attempt = 0) {
+    if (!onlineSupported() || !pool().words.length) return;
+    sfx.unlock(); voice.prime();
+    net.leave();
+    const code = String(1000 + Math.floor(Math.random() * 9000));
+    net.mode = "host"; net.code = code; net.guestName = "Гравець 2";
+    const link = location.origin + location.pathname + "#" + code;
+    lobby({ label: "Твоя кімната", code, text: "З'єднуюся з сервером", waiting: true });
+    net.link = net.transport.host(code, forSession({
+      ready: () => lobby({ label: "Твоя кімната", code, link,
+        text: "Надішли код або посилання суперникові. Чекаю, поки він під'єднається", waiting: true }),
+      guest: () => lobby({ label: "Твоя кімната", code, text: "Суперник під'єднується", waiting: true }),
+      data: onHostData,
+      closed: () => connectionLost("Суперник від'єднався."),
+      error: (kind) => {
+        if (net.mode !== "host") return;
+        if (kind === "taken" && attempt < 3) { hostRoom(attempt + 1); return; }
+        lobby({ text: "Не вдалося створити кімнату. Перевір інтернет і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      },
+    }));
+  }
+
+  function onHostData(d) {
+    if (net.mode !== "host" || !d || typeof d !== "object") return;
+    if (d.t === "hello") {
+      net.guestName = String(d.name || "").trim().slice(0, 16) || "Гравець 2";
+      if (!playing) lobby({ label: "Твоя кімната", code: net.code, text: `${net.guestName} у кімнаті. Можна починати!`, canStart: true });
+    } else if (d.t === "open") {
+      const i = Number(d.i);
+      // Accept only the guest's own turn; otherwise resend the state so the guest unlocks.
+      if (!(playing && !busy && game.turn === 1 && openCard(i, TIME_PLAYER))) net.send("sync");
+    } else if (d.t === "bye") {
+      connectionLost("Суперник вийшов з гри.");
+    }
+  }
+
+  function joinRoom() {
+    if (!onlineSupported()) return;
+    const code = $("joinCode").value.replace(/\D/g, "").slice(0, 4);
+    if (code.length !== 4) { $("joinCode").focus(); return; }
+    sfx.unlock(); voice.prime();
+    net.leave();
+    net.mode = "guest"; net.code = code;
+    lobby({ label: `Кімната ${code}`, text: "Під'єднуюся", waiting: true });
+    clearTimeout(net.connectTimer);
+    net.connectTimer = setTimeout(() => {
+      if (net.mode === "guest" && !playing) {
+        lobby({ text: "Не вдалося під'єднатися. Перевір код і що кімната ще відкрита, і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      }
+    }, 20000);
+    net.link = net.transport.join(code, forSession({
+      connected: () => {
+        clearTimeout(net.connectTimer);
+        net.toHost({ t: "hello", name: settings.name1 || "Гравець 2" });
+        lobby({ label: `Кімната ${code}`, text: "Під'єднано! Чекаємо, поки суперник почне гру", waiting: true });
+      },
+      data: onGuestData,
+      closed: () => connectionLost("Зв'язок із суперником втрачено."),
+      error: (kind) => {
+        if (net.mode !== "guest") return;
+        clearTimeout(net.connectTimer);
+        lobby({ text: kind === "no-room" ? "Кімнату з таким кодом не знайдено. Перевір код." :
+                      "Не вдалося під'єднатися. Перевір інтернет і спробуй ще раз.", error: true, cancel: "До меню" });
+        net.leave();
+      },
+    }));
+  }
+
+  function onGuestData(d) {
+    if (net.mode !== "guest" || !d || typeof d !== "object") return;
+    if (d.t === "bye") { connectionLost("Суперник вийшов з гри."); return; }
+    if (d.t === "full") { lobby({ text: "У цій кімнаті вже грають двоє.", error: true, cancel: "До меню" }); net.leave(); return; }
+    if (!applySnapshot(d.s)) return;
+    const i = Number(d.i);
+    switch (d.t) {
+      case "start":
+        clearTimers(); vsCPU = false; cpu = null; playing = true;
+        enterGame();
+        break;
+      case "flip": if (playing) showFlip(i); break;
+      case "result": if (playing) showResult(i, String(d.result)); break;
+      case "next": if (playing) { if (game.over) syncCards(); else showNext(); } break;
+      case "over": playing = false; showResults(); break;
+      case "sync": if (playing) { syncCards(); renderBar(); } break;
+    }
+  }
+
+  function connectionLost(message) {
+    if (net.mode === "local") return;          // we left on purpose
+    clearTimers(); voice.stop(); playing = false; busy = false;
+    net.leave();
+    lobby({ text: message, error: true, cancel: "До меню" });
+  }
+
+  $("hostBtn").addEventListener("click", () => hostRoom());
+  $("joinBtn").addEventListener("click", joinRoom);
+  $("joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") joinRoom(); });
+  $("joinCode").addEventListener("input", () => { $("joinCode").value = $("joinCode").value.replace(/\D/g, "").slice(0, 4); });
+  $("lobbyStart").addEventListener("click", startGame);
+  $("lobbyCancel").addEventListener("click", stopGame);
+  $("copyLink").addEventListener("click", () => {
+    const input = $("shareLink"), btn = $("copyLink");
+    const done = () => { btn.textContent = "Скопійовано"; setTimeout(() => btn.textContent = "Копіювати", 1500); };
+    try {
+      navigator.clipboard.writeText(input.value).then(done, () => { input.select(); });
+    } catch { input.select(); }
+  });
+
+  // An invite link like ".../#4827" fills in the code; joining still needs one tap (for sound).
+  const invite = (location.hash || "").replace("#", "");
+  if (/^\d{4}$/.test(invite)) { $("joinCode").value = invite; }
+  onlineReady = true;
+  renderOnline();
+  // PeerJS loads after this script; check again once the page has finished loading.
+  addEventListener("load", renderOnline);
+  addEventListener("beforeunload", () => net.leave());
 
   // ---------- Sparkles (SparkleView.swift) ----------
   const fx = $("fx"), ctx = fx.getContext("2d");
